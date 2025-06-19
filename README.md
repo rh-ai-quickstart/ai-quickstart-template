@@ -22,20 +22,20 @@ To see how it's done, jump straight to [installation](#install).
 
 ## Table of contents
 
-*Table of contents is optional*
+*Table of contents is optional, but recommended*
 
-## Description 
+## Detailed description
 *This section is required. This is your chance to describe the AI kickstart.*
 
-## See it in action 
+### See it in action 
 
 *This section is optional but recommended*
 
-## Architecture diagrams
+### Architecture diagrams
 
 *Section is required. Put images in `assets/images` folder* 
 
-## References 
+### References 
 
 *Section required. Include links to supporting information, documentation, or
 learning materials.*
@@ -57,8 +57,12 @@ learning materials.*
 *Section is required. Describe the permissions the user will need. Cluster
 admin? Regular user?*
 
-## Install 
+## Install
 
 *Section is required. Include the explicit steps needed to deploy your
 kickstart. If screenshots are included, remember to put them in the
 `assets/images` folder.*
+
+## Uninstall 
+
+*Section required. Include explicit steps to cleanup kickstart.*
