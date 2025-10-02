@@ -10,7 +10,7 @@ of your quickstart.*
 should I bother deploying it?*
 
 *Need an example README? Look at:
-[vllm-cpu](https://github.com/rh-ai-quickstart/vllm-cpu)*
+[vllm-cpu](https://github.com/rh-ai-quickstart/llm-cpu-serving)*
 
 *OR, [vLLM Tool Calling](https://github.com/rh-ai-quickstart/vllm-tool-calling)*
 
