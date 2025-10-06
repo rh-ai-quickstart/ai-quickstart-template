@@ -66,6 +66,7 @@ Arcades are a great way to showcase your quickstart before installation.
 
 --> 
 
+
 ## Requirements
 
 
@@ -102,7 +103,8 @@ admin? Regular user?*
 
 --> 
 
-## Install
+
+## Deploy
 
 <!-- CONTRIBUTOR TODO: add installation instructions 
 
@@ -116,7 +118,7 @@ If screenshots are included, remember to put them in the
 
 -->
 
-## Uninstall 
+### Delete
 
 <!-- CONTRIBUTOR TODO: add uninstall instructions
 
@@ -136,7 +138,7 @@ Include links to supporting information, documentation, or learning materials.
 
 --> 
 
-## Technical section
+## Technical details
 
 <!-- 
 
