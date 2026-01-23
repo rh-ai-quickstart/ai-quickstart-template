@@ -150,7 +150,7 @@ helm install lemonade-stand-assistant ./chart --namespace ${PROJECT} \
 Once deployed, access the Lemonade Stand Assistant UI. You can find the route with:
 
 ```bash
-echo https://$(oc get route/lemonade-stand -n ${PROJECT} --template='{{.spec.host}}')
+echo https://$(oc get route/lemonade-stand-assistant -n ${PROJECT} --template='{{.spec.host}}')
 ```
 
 Open the URL in your browser and start asking questions about lemonade and other fruits!
@@ -177,8 +177,7 @@ The Lemonade Stand Assistant consists of the following components:
 
 **Orchestration:**
 - **Guardrails Orchestrator**: Coordinates detector models using FMS Orchestr8
-- **FastAPI Application**: High-concurrency ASGI service with SSE streaming that provides the user interface for customer interactions
-- **Chunker Service**: Text processing service for handling input chunking
+- **Shiny Application**: Provides the user interface for customer interactions
 
 ### Models
 
