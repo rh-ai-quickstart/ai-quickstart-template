@@ -7,6 +7,12 @@ metadata:
     helm.sh/weight: "0"
 data:
   config.yaml: |
+    chunkers:
+      sentence:
+        type: sentence
+        service:
+            hostname: chunker-service
+            port: 8085
     openai: 
       service:
         hostname: llama-32-predictor
@@ -17,26 +23,26 @@ data:
         service:
             hostname: "127.0.0.1"
             port: 8080
-        chunker_id: whole_doc_chunker
+        chunker_id: chunkers
         default_threshold: 0.5
       hap:
         type: text_contents
         service:
           hostname: guardrails-detector-ibm-hap-predictor
           port: 80
-        chunker_id: whole_doc_chunker
+        chunker_id: chunkers
         default_threshold: 0.5
       prompt_injection:
         type: text_contents
         service:
           hostname: prompt-injection-detector-predictor
           port: 80
-        chunker_id: whole_doc_chunker
+        chunker_id: chunkers
         default_threshold: 0.5
       language_detection:
         type: text_contents
         service:
           hostname: language-detector-predictor
           port: 80
-        chunker_id: whole_doc_chunker
+        chunker_id: chunkers
         default_threshold: 0.5
