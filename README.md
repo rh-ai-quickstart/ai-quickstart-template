@@ -37,7 +37,7 @@ The guardrails orchestrator coordinates these detectors to evaluate inputs and o
 
 **[▶️ View Interactive Demo](https://demo.arcade.software/X3orbmpyKdY295116jnY)**
 
-**[🎬 Watch Demo Video](./lemonade-stand-demo.mp4)**
+https://github.com/user-attachments/assets/998dd37d-6130-4971-b8a2-d4ded8c40a27
 
 #### Monitoring Dashboard
 
