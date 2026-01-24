@@ -1,14 +1,14 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: chunker-service
-  namespace: lemonade-stand
   labels:
     app: chunker-service
     app.kubernetes.io/name: chunker-service
     app.kubernetes.io/component: chunker
 spec:
-  replicas: 30
+  replicas: 1
   selector:
     matchLabels:
       app: chunker-service
@@ -27,17 +27,16 @@ spec:
           protocol: TCP
         resources:
             limits:
-              cpu: '3'
-              memory: 4Gi
-            requests:
               cpu: '2'
               memory: 2Gi
+            requests:
+              cpu: '1'
+              memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: chunker-service
-  namespace: lemonade-stand
   labels:
     app: chunker-service
 spec:
