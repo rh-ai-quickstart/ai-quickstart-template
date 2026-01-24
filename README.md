@@ -37,6 +37,8 @@ The guardrails orchestrator coordinates these detectors to evaluate inputs and o
 
 **[▶️ View Interactive Demo](https://demo.arcade.software/X3orbmpyKdY295116jnY)**
 
+**[🎬 Watch Demo Video](./lemonade-stand-demo.mp4)**
+
 #### Monitoring Dashboard
 
 The solution includes a Grafana dashboard for monitoring guardrail detections in real-time:
@@ -177,7 +179,7 @@ The Lemonade Stand Assistant consists of the following components:
 
 **Orchestration:**
 - **Guardrails Orchestrator**: Coordinates detector models using FMS Orchestr8
-- **Shiny Application**: Provides the user interface for customer interactions
+- **Lemonade Stand App**: FastAPI-based web application providing the user interface for customer interactions
 
 ### Models
 
