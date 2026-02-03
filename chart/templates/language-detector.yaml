@@ -81,6 +81,5 @@ spec:
     tolerations:
       - effect: NoSchedule
         key: nvidia.com/gpu
-        operator: Equal
-        value: Tesla-T4-SHARED
+        operator: Exists
     {{- end }}
