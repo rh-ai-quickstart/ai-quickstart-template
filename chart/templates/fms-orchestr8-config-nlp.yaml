@@ -42,7 +42,7 @@ data:
       language_detection:
         type: text_contents
         service:
-          hostname: language-detector-predictor
-          port: 8000
+          hostname: lingua-detector
+          port: 8080
         chunker_id: sentence
-        default_threshold: 0.5
+        default_threshold: 0.88

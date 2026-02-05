@@ -24,13 +24,3 @@ detectors:
         cpu: '8'
         memory: 24Gi
 
-  # Language Detector (XLM-RoBERTa)
-  language:
-    useGpu: false
-    resources:
-      requests:
-        cpu: '4'
-        memory: 16Gi
-      limits:
-        cpu: '8'
-        memory: 24Gi

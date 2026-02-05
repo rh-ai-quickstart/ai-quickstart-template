@@ -26,7 +26,7 @@ The Lemonade Stand Assistant provides an interactive customer service experience
 To ensure safe and appropriate interactions, the system employs multiple AI guardrails:
 - **[IBM HAP Detector (Granite Guardian)](https://huggingface.co/ibm-granite/granite-guardian-hap-125m)**: Monitors conversations for hate, abuse, and profanity
 - **[Prompt Injection Detector (DeBERTa v3)](https://huggingface.co/protectai/deberta-v3-base-prompt-injection-v2)**: Identifies and blocks attempts to manipulate the AI assistant
-- **[Language Detector (XLM-RoBERTa)](https://huggingface.co/papluca/xlm-roberta-base-language-detection)**: Ensures inputs and responses are in English only
+- **[Lingua Language Detector](https://github.com/pemistahl/lingua)**: Ensures inputs and responses are in English only
 
 Furthemore, there is a:
 - **Regex Detector**: Blocks specific text without the use of models. In our case, its other fruits we consider "competitors".
@@ -64,13 +64,13 @@ The solution includes a Grafana dashboard for monitoring guardrail detections in
 - CPU: 4 vCPU (request) / 8 vCPU (limit)
 - Memory: 16 GiB (request) / 24 GiB (limit)
 
-**Language Detector (XLM-RoBERTa Base):**
-- CPU: 4 vCPU (request) / 8 vCPU (limit)
-- Memory: 16 GiB (request) / 24 GiB (limit)
+**Lingua Language Detector:**
+- CPU: 1 vCPU (request) / 2 vCPU (limit)
+- Memory: 2 GiB (request) / 3 GiB (limit)
 
 **Total Resource Requirements:**
-- CPU: 10 vCPU (request) / 22 vCPU (limit)
-- Memory: 44 GiB (request) / 72 GiB (limit)
+- CPU: 7 vCPU (request) / 16 vCPU (limit)
+- Memory: 30 GiB (request) / 51 GiB (limit)
 - GPU: 1 NVIDIA GPU (for LLM only)
 
 > **Note**: The detector models are configured to run on CPU by default. If you have additional GPU resources available and want to improve detector performance, you can enable GPU acceleration for the detectors. See the [Configuration Options](#configuration-options) section for details on customizing GPU usage.
@@ -132,12 +132,11 @@ helm install lemonade-stand-assistant ./chart --namespace ${PROJECT} \
   --set detectors.hap.useGpu=true
 ```
 
-**Example: Enable GPU for all detectors (requires 4 total GPUs)**
+**Example: Enable GPU for all configurable detectors (requires 3 total GPUs)**
 ```bash
 helm install lemonade-stand-assistant ./chart --namespace ${PROJECT} \
   --set detectors.hap.useGpu=true \
-  --set detectors.promptInjection.useGpu=true \
-  --set detectors.language.useGpu=true
+  --set detectors.promptInjection.useGpu=true
 ```
 
 **Example: Custom resource allocation for HAP detector**
@@ -175,7 +174,7 @@ The Lemonade Stand Assistant consists of the following components:
 - **[Llama 3.2 3B Instruct](https://huggingface.co/RedHatAI/Llama-3.2-3B-Instruct-FP8-dynamic)**: Main language model for generating responses
 - **[IBM HAP Detector (Granite Guardian HAP 125M)](https://huggingface.co/ibm-granite/granite-guardian-hap-125m)**: Detects hate, abuse, and profanity
 - **[Prompt Injection Detector (DeBERTa v3 Base)](https://huggingface.co/protectai/deberta-v3-base-prompt-injection-v2)**: Identifies prompt injection attempts
-- **[Language Detector (XLM-RoBERTa Base)](https://huggingface.co/papluca/xlm-roberta-base-language-detection)**: Validates language compliance (English only)
+- **[Lingua Language Detector](https://github.com/pemistahl/lingua)**: Validates language compliance (English only)
 
 **Orchestration:**
 - **Guardrails Orchestrator**: Coordinates detector models using FMS Orchestr8
@@ -188,13 +187,14 @@ The Lemonade Stand Assistant consists of the following components:
 | Main LLM | Llama 3.2 3B Instruct | 3B parameters | Conversational AI |
 | HAP Detection | Granite Guardian HAP | 125M parameters | Content safety |
 | Prompt Injection Guard | DeBERTa v3 Base | ~184M parameters | Security |
-| Language Detection | XLM-RoBERTa Base | ~270M parameters | Language validation |
+| Language Detection | Lingua | Rule-based | Language validation |
 
 ### Deployment Configuration
 
-All models are deployed as KServe InferenceServices on OpenShift AI using:
-- vLLM runtime for the main LLM (optimized inference)
-- Guardrails Detector runtime for all detector models
+Models are deployed on OpenShift AI using:
+- vLLM runtime for the main LLM (KServe InferenceService with optimized inference)
+- Guardrails Detector runtime for HAP and Prompt Injection detectors (KServe InferenceServices)
+- Standard Kubernetes Deployment for Lingua language detector
 
 ## Tags
 

@@ -62,7 +62,6 @@ spec:
               models=(
                 ibm-granite/granite-guardian-hap-125m
                 protectai/deberta-v3-base-prompt-injection-v2
-                papluca/xlm-roberta-base-language-detection
               )
               echo "Starting download"
               mkdir /mnt/models/llms/
