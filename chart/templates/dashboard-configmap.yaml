@@ -1,0 +1,18 @@
+{{- if .Values.metrics.dashboard.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lemonade-stand-dashboard
+  namespace: openshift-config-managed
+  labels:
+    app: lemonade-stand
+    app.kubernetes.io/name: lemonade-stand
+    app.kubernetes.io/component: config
+    console.openshift.io/dashboard: "true"
+    {{- if .Values.metrics.dashboard.odc }}
+    console.openshift.io/odc-dashboard: "true"
+    {{- end }}
+data:
+  lemonade-dashboard.json: |-
+    {{- .Files.Get "dashboards/lemonade-dashboard.json" | nindent 4 }}
+{{- end }}

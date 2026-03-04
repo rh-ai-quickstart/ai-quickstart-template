@@ -39,13 +39,27 @@ The guardrails orchestrator coordinates these detectors to evaluate inputs and o
 
 https://github.com/user-attachments/assets/998dd37d-6130-4971-b8a2-d4ded8c40a27
 
-#### Monitoring Dashboard
+#### Monitoring Dashboards
 
 The solution includes a Grafana dashboard for monitoring guardrail detections in real-time:
 
 ![Grafana Dashboard](./docs/images/grafana-dashboard.png)
 
 > **Optional**: To deploy the monitoring dashboard, see the [grafana](./grafana) folder for installation instructions. Note that deploying Grafana may require elevated cluster privileges to install the Grafana Operator.
+
+If you prefer, there is also the option to deploy a version of the dashboard to the build-in OpenShift dashboard viewer. This does not require the grafana deployment, but still requires cluster admin privileges.
+
+The dashboard can be enabled in the top level .helm chart by setting `metrics.dashboard.enabled` to true. If you want to see the dashboard in developer views enable the `odc` label setting as well in the `values.yaml`.
+
+```yaml
+# Enable openshift dashboard
+metrics:
+  dashboard:
+    enabled: true # requires cluster-admin privileges to install the dashboard
+    odc: false
+```
+
+Once deployed the OpenShift dashboard can be found in OpenShift > Observe > Lemonade Stand Guardrail Metrics.
 
 ## Requirements
 

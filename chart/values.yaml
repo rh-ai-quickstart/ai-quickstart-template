@@ -24,3 +24,8 @@ detectors:
         cpu: '8'
         memory: 24Gi
 
+# Enable openshift dashboard
+metrics:
+  dashboard:
+    enabled: false # requires cluster-admin privileges to install the dashboard
+    odc: false
