@@ -1,10 +1,31 @@
-# Lemonade Stand Assistant
+# Add Guardrails to the Lemonade Stand Assistant
 
-## Acknowledgement
+Deploy an AI-powered customer service assistant with built-in safety guardrails to ensure family-friendly, compliant interactions for your business.
 
-This quickstart is based on the demo by Trusty AI team. It can be found [here](https://github.com/trustyai-explainability/trustyai-llm-demo/tree/lemonade-stand). If you like this demo, we encourage people to contribute to the community of TrustyAI.
+## Table of Contents
 
-## Overview
+- [Detailed description](#detailed-description)
+  - [Architecture diagrams](#architecture-diagrams)
+  - [See it in action](#see-it-in-action)
+  - [Monitoring dashboards](#monitoring-dashboards)
+- [Requirements](#requirements)
+  - [Minimum hardware requirements](#minimum-hardware-requirements)
+  - [Minimum software requirements](#minimum-software-requirements)
+- [Deploy](#deploy)
+  - [Prerequisites](#prerequisites)
+  - [Deployment](#deployment)
+  - [Configuration options](#configuration-options)
+  - [Validating the deployment](#validating-the-deployment)
+  - [Delete](#delete)
+- [Technical details](#technical-details)
+  - [Architecture](#architecture)
+  - [Models](#models)
+  - [Deployment Configuration](#deployment-configuration)
+- [Reference](#reference)
+- [Tags](#tags)
+
+
+## Detailed description
 
 Imagine we run a successful lemonade stand and want to deploy a customer service agent so our customers can learn more about our products. We'll want to make sure all conversations with the agent are family friendly, and that it does not promote our rival fruit juice vendors.
 
@@ -16,11 +37,9 @@ This demo showcases how to deploy an AI-powered customer service assistant with 
 2. The user is untrusted. All the input must be validated.
 3. Triggering of specific detectors is monitored and visualized. (Alerts are out of scope but could be done)
 
-![architecture.png](./docs/images/architecture.png)
-
-## Detailed description
-
 The Lemonade Stand Assistant provides an interactive customer service experience for a fictional lemonade stand business. Customers can ask questions about products, ingredients, pricing, and more through a conversational interface.
+
+https://github.com/user-attachments/assets/998dd37d-6130-4971-b8a2-d4ded8c40a27
 
 To ensure safe and appropriate interactions, the system employs multiple AI guardrails:
 - **[IBM HAP Detector (Granite Guardian)](https://huggingface.co/ibm-granite/granite-guardian-hap-125m)**: Monitors conversations for hate, abuse, and profanity
@@ -32,11 +51,14 @@ Furthermore, there is a:
 
 The guardrails orchestrator coordinates these detectors to evaluate inputs and outputs before presenting responses to users.
 
+### Architecture Diagrams
+
+![architecture.png](./docs/images/architecture.png)
+
 ### See it in action
 
 **[▶️ View Interactive Demo](https://demo.arcade.software/X3orbmpyKdY295116jnY)**
 
-https://github.com/user-attachments/assets/998dd37d-6130-4971-b8a2-d4ded8c40a27
 
 ### Monitoring Dashboards
 
@@ -99,21 +121,18 @@ Once deployed the OpenShift dashboard can be found in OpenShift > Observe > Lemo
 - Red Hat OpenShift Container Platform
 - Red Hat OpenShift AI
 
-### Required user permissions
-
-You need to have cluster admin privileges to create the guardrails orchestrator resources.
-
 ## Deploy
 
 ### Prerequisites
 
 Before deploying, ensure you have:
 - Access to a Red Hat OpenShift cluster with OpenShift AI installed and TrustyAI enabled
+- Cluster admin privileges to create the guardrails orchestrator resources
 - `oc` CLI tool installed and configured
 - `helm` CLI tool installed
 - Sufficient resources available in your cluster
 
-### Installation
+### Deployment
 
 1. Clone the repository:
 ```bash
@@ -194,7 +213,7 @@ echo https://$(oc get route/lemonade-stand-assistant -n ${PROJECT} --template='{
 
 Open the URL in your browser and start asking questions about lemonade and other fruits!
 
-### Uninstall
+### Delete
 
 To remove the deployment:
 
@@ -234,16 +253,16 @@ Models are deployed on OpenShift AI using:
 - Guardrails Detector runtime for HAP and Prompt Injection detectors (KServe InferenceServices)
 - Standard Kubernetes Deployment for Lingua language detector
 
+## Reference
+
+This quickstart is based on the demo by the TrustyAI team. For more information and to contribute:
+
+- [TrustyAI Lemonade Stand Demo](https://github.com/trustyai-explainability/trustyai-llm-demo/tree/lemonade-stand) - Original demo implementation
+- [TrustyAI Community](https://github.com/trustyai-explainability) - Contribute to the TrustyAI explainability project
+
 ## Tags
 
-**Title:** Lemonade Stand Assistant
-
-**Description:** AI-powered customer service assistant with guardrails for safe, compliant interactions using an LLM and multiple detector models.
-
-**Industry:** Retail (but it can be applied to any industry)
-
-**Product:** OpenShift AI, Trusty AI Guardrails Orchestrator feature
-
-**Use case:** AI safety, content moderation
-
-**Contributor org:** Red Hat
+* **Industry:** Retail 
+* **Product:** OpenShift AI, Trusty AI 
+* **Use case:** AI safety, content moderation
+* **Contributor org:** Red Hat
