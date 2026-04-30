@@ -57,7 +57,7 @@ The guardrails orchestrator coordinates these detectors to evaluate inputs and o
 
 ### See it in action
 
-**[▶️ View Interactive Demo](https://demo.arcade.software/X3orbmpyKdY295116jnY)**
+**[▶️ View Interactive Demo](https://interact.redhat.com/share/ccMmWuFhRNPc9ppjTAz4)**
 
 
 ### Monitoring Dashboards
