@@ -2,6 +2,8 @@
 
 Deploy an AI-powered customer service assistant with built-in safety guardrails to ensure family-friendly, compliant interactions for your business.
 
+Built by Anneli Sara Banderby and Cansu Cavili-Örnek. 
+
 ## Table of Contents
 
 - [Detailed description](#detailed-description)
