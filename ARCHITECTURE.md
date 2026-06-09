@@ -19,7 +19,6 @@
   - [Building Your Helm Chart](#building-your-helm-chart)
   - [Model Deployment Options](#model-deployment-options)
   - [Contribution Guidelines](#contribution-guidelines)
-- [Existing Quickstarts](#existing-quickstarts)
 - [Testing Best Practices](#testing-best-practices)
   - [Testing Strategy](#testing-strategy)
   - [Unit Tests](#unit-tests)
@@ -392,67 +391,241 @@ my-quickstart/
 
 Your Helm chart is the heart of the quickstart. It should:
 
-1. **Declare dependencies** on shared architecture charts in `Chart.yaml`.
-2. **Expose configuration** through `values.yaml` — model selection, resource limits, feature toggles.
-3. **Support both MaaS and local model deployment** via the `model` values block.
+1. **Declare dependencies** on shared architecture charts in `Chart.yaml` with condition flags.
+2. **Expose model configuration** through `global.models` in `values.yaml` — supporting both local and remote models.
+3. **Use a Makefile** to orchestrate installation with command-line overrides for model selection, device type, and tolerations.
 4. **Include a Helm test** (`test-model-access.yaml`) to validate model connectivity.
 5. **Use OpenShift Routes** for exposing the UI to users.
 
-Example `values.yaml` structure:
+#### Chart.yaml with Dependencies
+
+Declare dependencies on the shared architecture charts, each gated by a condition flag:
 
 ```yaml
-# Model configuration
-model: {}
-# model:
-#   name: llama-3-2-3b-instruct
-#   endpoint: https://my-maas-instance:443
-#   api_key: my-api-key
+apiVersion: v2
+name: my-quickstart
+description: A Helm chart for deploying an AI quickstart on OpenShift AI
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
 
-# Application configuration
-app:
-  replicas: 1
-  image: quay.io/my-org/my-app:latest
-  resources:
-    requests:
-      cpu: "2"
-      memory: "4Gi"
-    limits:
-      cpu: "4"
-      memory: "8Gi"
+dependencies:
+  - name: pgvector
+    version: 0.5.5
+    repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+    condition: pgvector.enabled
+  - name: llm-service
+    version: 0.5.9
+    repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+    condition: llm-service.enabled
+  - name: llama-stack
+    version: 0.8.6
+    repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+    condition: llama-stack.enabled
+  - name: ingestion-pipeline
+    version: 0.7.4
+    repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+    condition: ingestion-pipeline.enabled
+  - name: configure-pipeline
+    version: 0.5.8
+    repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+    condition: configure-pipeline.enabled
+  - name: mcp-servers
+    version: 0.5.15
+    repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+    condition: mcp-servers.enabled
+```
 
-# Feature toggles
-features:
-  safety: false          # Enable Llama Guard safety shields
-  ingestion: true        # Deploy document ingestion pipeline
-  mcpServers: false      # Deploy MCP servers
+#### Values.yaml Structure
+
+Models are configured under `global.models`, where each key is a model name. The presence of a `url` field distinguishes a remote/MaaS model from a locally deployed one. Subchart-specific configuration is nested under the subchart name.
+
+```yaml
+# LLM Service Configuration
+llm-service:
+  secret:
+    hf_token: ""
+    enabled: true
+
+# Global model configuration
+# Models are enabled/disabled individually
+# Local models deploy vLLM pods on the cluster
+# Remote models (with url field) proxy through LlamaStack
+global:
+  models:
+    # Local model — deployed on-cluster via vLLM
+    llama-3-2-3b-instruct:
+      id: meta-llama/Llama-3.2-3B-Instruct
+      enabled: false
+      tolerations:
+        - key: "nvidia.com/gpu"
+          operator: Exists
+          effect: NoSchedule
+
+    # CPU variant — same model, no GPU required
+    llama-3-2-1b-instruct-cpu:
+      id: meta-llama/Llama-3.2-1B-Instruct
+      enabled: false
+      device: cpu
+      resources:
+        limits:
+          cpu: "6"
+          memory: 12Gi
+        requests:
+          cpu: "2"
+          memory: 6Gi
+
+    # Remote / MaaS model — no local deployment
+    # remotellm:
+    #   id: custom-model-id
+    #   url: https://custom-server-url/v1
+    #   apiToken: your-api-token
+    #   enabled: false
+
+    # Safety model (optional)
+    # llama-guard-3-8b:
+    #   id: meta-llama/Llama-Guard-3-8B
+    #   enabled: false
+    #   registerShield: true
+    #   tolerations:
+    #     - key: "nvidia.com/gpu"
+    #       operator: Exists
+    #       effect: NoSchedule
+
+# Database Configuration (pgvector)
+pgvector:
+  secret:
+    user: "postgres"
+    password: "app_password"
+    dbname: "app_db"
+    host: "pgvector"
+    port: "5432"
+
+# MinIO / S3 Configuration
+configure-pipeline:
+  minio:
+    secret:
+      user: minio_user
+      password: minio_password
+      host: minio
+      port: "9000"
+    sampleFileUpload:
+      enabled: true
+      bucket: documents
+
+# LlamaStack Configuration
+llama-stack:
+  secrets:
+    TAVILY_SEARCH_API_KEY: ""
+
+# Ingestion Pipeline Configuration
+ingestion-pipeline:
+  enabled: true
+  pipelines:
+    my-pipeline:
+      enabled: true
+      source: GITHUB
+      embedding_model: "all-MiniLM-L6-v2"
+      name: "my-vector-db"
+      version: "1.0"
+      vector_store_name: "my-vector-db-v1-0"
+      GITHUB:
+        url: https://github.com/my-org/my-repo.git
+        path: data/documents
+        branch: main
+```
+
+For a complete real-world example, see the [RAG quickstart values file](https://github.com/rh-ai-quickstart/RAG/blob/main/deploy/helm/rag-values.yaml.example).
+
+#### Makefile for Installation
+
+Use a Makefile to wrap Helm commands with sensible defaults and command-line overrides:
+
+```makefile
+NAMESPACE ?=
+LLM ?=
+SAFETY ?=
+DEVICE ?= gpu
+LLM_URL ?=
+LLM_API_TOKEN ?=
+LLM_TOLERATION ?= nvidia.com/gpu
+HF_TOKEN ?=
+CHART_DIR := chart
+
+.PHONY: install
+install: check-deps namespace depend
+	$(eval HELM_ARGS :=)
+ifdef LLM
+	$(eval HELM_ARGS += --set global.models.$(LLM).enabled=true)
+endif
+ifdef LLM_URL
+	$(eval HELM_ARGS += --set global.models.$(LLM).url=$(LLM_URL))
+	$(eval HELM_ARGS += --set global.models.$(LLM).apiToken=$(LLM_API_TOKEN))
+endif
+ifdef LLM_TOLERATION
+	$(eval HELM_ARGS += --set global.models.$(LLM).tolerations[0].key=$(LLM_TOLERATION))
+	$(eval HELM_ARGS += --set global.models.$(LLM).tolerations[0].operator=Exists)
+	$(eval HELM_ARGS += --set global.models.$(LLM).tolerations[0].effect=NoSchedule)
+endif
+ifdef HF_TOKEN
+	$(eval HELM_ARGS += --set llm-service.secret.hf_token=$(HF_TOKEN))
+endif
+	helm upgrade --install my-quickstart $(CHART_DIR) \
+		-n $(NAMESPACE) -f values.yaml $(HELM_ARGS)
+
+.PHONY: uninstall
+uninstall:
+	helm uninstall my-quickstart -n $(NAMESPACE)
+	oc delete pvc -l app=pgvector -n $(NAMESPACE) --ignore-not-found
+	oc delete pvc -l app=minio -n $(NAMESPACE) --ignore-not-found
+
+.PHONY: status
+status:
+	@oc get pods -n $(NAMESPACE)
+	@oc get svc -n $(NAMESPACE)
+	@oc get routes -n $(NAMESPACE)
+
+.PHONY: list-models
+list-models:
+	@helm template my-quickstart $(CHART_DIR) --set _debugListModels=true 2>/dev/null \
+		| grep "model:" || echo "No models found"
+
+.PHONY: namespace
+namespace:
+	oc new-project $(NAMESPACE) 2>/dev/null || true
+
+.PHONY: depend
+depend:
+	helm dependency update $(CHART_DIR)
+
+.PHONY: check-deps
+check-deps:
+	@command -v helm >/dev/null || (echo "ERROR: helm not found" && exit 1)
+	@command -v oc >/dev/null || (echo "ERROR: oc not found" && exit 1)
 ```
 
 ### Model Deployment Options
 
-Quickstarts support two model deployment modes:
+Quickstarts support two model deployment modes, distinguished by the presence of a `url` field in the model configuration.
 
-#### Option A: Model as a Service (MaaS)
+#### Option A: Local Model Deployment (On-Cluster)
 
-Connect to an existing model endpoint — no GPU required on the cluster:
-
-```bash
-helm install my-app ./chart \
-  --set model.name=my-model \
-  --set model.endpoint=https://my-endpoint \
-  --set model.api_key=my-key
-```
-
-#### Option B: Local Model Deployment
-
-Deploy a model directly on the cluster using vLLM on OpenShift AI. Requires GPU:
+Deploy a model directly on the cluster using vLLM on OpenShift AI. The `llm-service` subchart creates a vLLM inference pod. Requires GPU (or CPU for smaller models):
 
 ```bash
-helm install my-app ./chart \
-  --set model.name=llama-3-2-3b-instruct \
-  --set model.huggingface_token=hf_xxx
+# GPU deployment
+make install NAMESPACE=my-app LLM=llama-3-2-3b-instruct LLM_TOLERATION="nvidia.com/gpu"
+
+# CPU deployment (no GPU required)
+make install NAMESPACE=my-app LLM=llama-3-2-1b-instruct-cpu DEVICE=cpu
+
+# With safety model
+make install NAMESPACE=my-app \
+  LLM=llama-3-2-3b-instruct LLM_TOLERATION="nvidia.com/gpu" \
+  SAFETY=llama-guard-3-8b SAFETY_TOLERATION="nvidia.com/gpu"
 ```
 
-Supported hardware for local deployment:
+Supported hardware:
 
 | Hardware | Flag | Example |
 |----------|------|---------|
@@ -460,6 +633,44 @@ Supported hardware for local deployment:
 | Intel Gaudi HPU | `DEVICE=hpu` | Gaudi 2, Gaudi 3 |
 | Intel Xeon CPU | `DEVICE=xeon` | Sapphire Rapids+ |
 | Generic CPU | `DEVICE=cpu` | Any x86_64 |
+
+#### Option B: Remote Model / MaaS (Model as a Service)
+
+Connect to an existing model endpoint. No GPU required — the `llm-service` does not deploy a local vLLM instance. LlamaStack proxies requests to the remote endpoint:
+
+```bash
+make install NAMESPACE=my-app \
+  LLM=remotellm \
+  LLM_URL=https://my-model-endpoint/v1 \
+  LLM_API_TOKEN=my-api-token
+```
+
+Or configure directly in `values.yaml`:
+
+```yaml
+global:
+  models:
+    remotellm:
+      id: custom-model-id
+      url: https://my-model-endpoint/v1
+      apiToken: my-api-token
+      enabled: true
+```
+
+The key distinction: when a model entry has a `url` field, LlamaStack configures a remote inference provider. When `url` is absent, the `llm-service` deploys a local vLLM pod.
+
+#### Makefile Command-Line Overrides
+
+| Variable | Purpose |
+|----------|---------|
+| `LLM` | Model key to enable (e.g., `llama-3-2-3b-instruct`, `remotellm`) |
+| `SAFETY` | Safety model key to enable (e.g., `llama-guard-3-8b`) |
+| `LLM_URL` / `SAFETY_URL` | Remote endpoint URL (triggers MaaS mode) |
+| `LLM_API_TOKEN` / `SAFETY_API_TOKEN` | Auth token for remote models |
+| `LLM_TOLERATION` / `SAFETY_TOLERATION` | GPU node toleration key |
+| `DEVICE` | Device type: `cpu`, `gpu`, `hpu`, `xeon` |
+| `HF_TOKEN` | Hugging Face token for downloading model weights |
+| `NAMESPACE` | Target OpenShift namespace |
 
 ### Contribution Guidelines
 
@@ -480,110 +691,6 @@ When creating a new quickstart, follow these guidelines:
 5. **Helm test** — Include a test to validate model connectivity post-deployment.
 
 6. **License** — Use MIT license.
-
----
-
-## Existing Quickstarts
-
-The following quickstarts are available today, spanning multiple industries and AI patterns:
-
-### Enterprise RAG Chatbot
-
-**Use case**: Centralize company knowledge with an AI-powered chatbot that answers questions from your enterprise documents.
-
-| Attribute | Details |
-|-----------|---------|
-| **Repository** | [rh-ai-quickstart/RAG](https://github.com/rh-ai-quickstart/RAG) |
-| **Industry** | Cross-industry |
-| **AI Pattern** | Retrieval-Augmented Generation (RAG) |
-| **Components** | Streamlit UI, LlamaStack, vLLM (Llama 3), PGVector, MinIO, Ingestion Pipeline |
-| **Key Features** | Document upload, vector search, agent-based RAG mode, safety guardrails (Llama Guard) |
-| **Demo Scenario** | "FantaCo" — employees access HR, procurement, sales, and IT documentation through a chat interface |
-
-### IT Self-Service Agent — Laptop Refresh
-
-**Use case**: Automate routine IT processes like laptop refresh requests using AI agents that integrate with enterprise systems.
-
-| Attribute | Details |
-|-----------|---------|
-| **Repository** | [rh-ai-quickstart/it-self-service-agent](https://github.com/rh-ai-quickstart/it-self-service-agent) |
-| **Industry** | IT Operations |
-| **AI Pattern** | Multi-agent with MCP tool integration |
-| **Components** | Agent Service (LangGraph), Request Manager, Slack/Email integration, ServiceNow MCP Server, PromptGuard, PostgreSQL |
-| **Key Features** | Multi-channel input (Slack, Email, API), routing and specialist agents, knowledge bases, evaluation framework, OpenTelemetry tracing |
-| **Demo Scenario** | Employee requests laptop refresh via Slack or email; AI agent validates eligibility, presents options, and submits ServiceNow ticket |
-
-### AI Virtual Agent
-
-**Use case**: Build and deploy conversational AI agents with knowledge bases, tool integration, and safety guardrails.
-
-| Attribute | Details |
-|-----------|---------|
-| **Repository** | [rh-ai-quickstart/ai-virtual-agent](https://github.com/rh-ai-quickstart/ai-virtual-agent) |
-| **Industry** | Cross-industry |
-| **AI Pattern** | Conversational AI platform with RAG and MCP |
-| **Components** | React/PatternFly UI, FastAPI backend, LlamaStack, PGVector, MinIO, MCP Servers |
-| **Key Features** | Agent creation and management, knowledge base upload, streaming responses, Oracle DB integration |
-
-### PPE Compliance Monitor
-
-**Use case**: Use predictive and generative AI to keep workers safe on the job site by automatically detecting personal protective equipment.
-
-| Attribute | Details |
-|-----------|---------|
-| **Industry** | Manufacturing / Construction |
-| **AI Pattern** | Multi-modal (Computer Vision + Generative AI) |
-| **Key Features** | Real-time video feed analysis, PPE detection (hardhats, masks, safety vests), safety trend reporting, chat-based assistant |
-
-### Spending Transaction Monitor
-
-**Use case**: Define personalized financial alert rules using natural language to reduce fraud exposure and improve customer trust.
-
-| Attribute | Details |
-|-----------|---------|
-| **Industry** | Financial Services |
-| **AI Pattern** | NLU + rule generation |
-| **Key Features** | Natural language alert rule creation, transaction monitoring dashboard, AI-powered anomaly detection |
-
-### AI Product Recommendations
-
-**Use case**: Transform product discovery with personalized recommendations, AI-generated review summaries, and intelligent search.
-
-| Attribute | Details |
-|-----------|---------|
-| **Industry** | Retail / E-commerce |
-| **AI Pattern** | Recommendation engine + NLU |
-| **Key Features** | Product search, AI review summarization, personalized recommendations |
-
-### Observability Data Analyzer
-
-**Use case**: Summarize and analyze vLLM model observability data with AI-generated insights and actionable recommendations.
-
-| Attribute | Details |
-|-----------|---------|
-| **Industry** | IT Operations |
-| **AI Pattern** | Metrics analysis + generative AI |
-| **Key Features** | vLLM metrics monitoring, AI performance analysis reports, GPU/temperature/latency monitoring, chat-based assistant for metrics |
-
-### Lemonade Stand Assistant
-
-**Use case**: Secure customer service agent demonstrating content safety — validates user interactions and AI responses for safety and compliance.
-
-| Attribute | Details |
-|-----------|---------|
-| **Industry** | Cross-industry (Safety demonstration) |
-| **AI Pattern** | Guardrailed chatbot |
-| **Key Features** | Prompt injection detection, content filtering dashboard (swearing, non-English, jailbreak), safety metrics visualization |
-
-### Mortgage Lending with Multi-Agent AI
-
-**Use case**: Handle loan applications at scale with automated document processing and agentic workflows for the fictitious lender "Fed Aura Capital".
-
-| Attribute | Details |
-|-----------|---------|
-| **Industry** | Financial Services |
-| **AI Pattern** | Multi-agent workflow |
-| **Key Features** | Pre-qualification, risk assessment, compliance checks (ECOA, ATR/QM), AI-powered underwriting assistant |
 
 ---
 

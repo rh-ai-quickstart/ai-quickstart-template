@@ -14,7 +14,6 @@
 | [Quickstart Architecture](../ARCHITECTURE.md#quickstart-architecture) | Common components, reference diagrams, and the shared AI Architecture Helm Charts library |
 | [AI Architecture Helm Charts](../ARCHITECTURE.md#ai-architecture-helm-charts) | Reusable charts: LLM Service, LlamaStack, PGVector, MinIO, Ingestion Pipeline, MCP Servers, Oracle 23ai, Model Registry |
 | [How to Create a Quickstart](../ARCHITECTURE.md#how-to-create-a-quickstart) | Step-by-step guide: repository structure, Helm chart setup, model deployment options, and contribution guidelines |
-| [Existing Quickstarts](../ARCHITECTURE.md#existing-quickstarts) | Catalog of available quickstarts across industries — RAG, IT Self-Service Agent, AI Virtual Agent, PPE Monitor, and more |
 | [Testing Best Practices](../ARCHITECTURE.md#testing-best-practices) | Multi-layered testing: unit tests, integration tests, LLM evaluation framework, Helm chart validation |
 | [Code Quality](../ARCHITECTURE.md#code-quality) | Linting (flake8), formatting (black/isort), type checking (mypy), custom logging rules |
 | [Git Workflow and Configuration](../ARCHITECTURE.md#git-workflow-and-configuration) | Branch strategy (dev/main promotion), version management, dependency management, container builds |
