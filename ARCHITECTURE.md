@@ -163,7 +163,7 @@ A typical AI Quickstart is composed of the following layers:
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         User Interface                              │
-│              (Streamlit, React/PatternFly, Gradio)                  │
+│              (React/Tailwind CSS, Streamlit, Gradio)                │
 ├─────────────────────────────────────────────────────────────────────┤
 │                      Application Backend                            │
 │                   (FastAPI, Flask, Express)                          │
@@ -191,7 +191,7 @@ A typical AI Quickstart is composed of the following layers:
 
 | Component | Purpose | Common Technologies |
 |-----------|---------|-------------------|
-| **Frontend** | User-facing interface for interacting with the AI application | Streamlit, React with PatternFly, Gradio |
+| **Frontend** | User-facing interface for interacting with the AI application | React with Tailwind CSS, Streamlit, Gradio |
 | **Backend** | Business logic, API endpoints, session management | FastAPI, Flask |
 | **AI/Agent Framework** | Orchestrates LLM interactions, tool calling, and agent workflows | LlamaStack, LangGraph |
 | **Model Server** | Serves AI models with high-performance inference | vLLM on KServe (OpenShift AI), or remote MaaS endpoints |
@@ -370,15 +370,16 @@ my-quickstart/
 │       ├── configmap.yaml          # Configuration
 │       ├── secret.yaml             # Secrets (if needed)
 │       └── test-model-access.yaml  # Helm test for model connectivity
-├── frontend/                       # React frontend (PatternFly)
+├── frontend/                       # React frontend (Tailwind CSS)
 │   ├── src/                        # React components and pages
 │   ├── package.json                # Node.js dependencies
+│   ├── tailwind.config.js          # Tailwind CSS configuration
 │   ├── Containerfile               # Container build file
 │   └── tsconfig.json               # TypeScript configuration
-├── backend/                        # Backend API service
+├── backend/                        # FastAPI backend service
 │   ├── src/                        # Application code
 │   ├── Containerfile               # Container build file
-│   └── requirements.txt            # Python dependencies
+│   └── requirements.txt            # Python dependencies (FastAPI, uvicorn, etc.)
 ├── mcp_servers/                    # Custom MCP servers (if needed)
 ├── docs/
 │   └── images/                     # Architecture diagrams and screenshots
@@ -1460,7 +1461,8 @@ runs:
 | **[PostgreSQL + PGVector](https://github.com/pgvector/pgvector)** | Vector similarity search for RAG retrieval |
 | **[MinIO](https://min.io/)** | S3-compatible object storage for documents and model artifacts |
 | **[Helm](https://helm.sh/)** | Kubernetes package manager used for all quickstart deployment |
-| **[PatternFly](https://www.patternfly.org/)** | Red Hat's UI design system, used in React-based quickstart frontends |
+| **[Tailwind CSS](https://tailwindcss.com/)** | Utility-first CSS framework for building custom user interfaces |
+| **[FastAPI](https://fastapi.tiangolo.com/)** | Modern Python web framework for building backend APIs with automatic OpenAPI docs |
 
 ---
 
