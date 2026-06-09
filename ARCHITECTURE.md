@@ -340,7 +340,9 @@ helm install my-app ./chart --namespace my-project \
 
 ### Getting Started
 
-1. **Use the template repository** — Start by creating a new repository from the [AI Quickstart Template](https://github.com/rh-ai-quickstart/ai-quickstart-template).
+1. **Use the template repository** — Go to the [AI Quickstart Template](https://github.com/rh-ai-quickstart/ai-quickstart-template) on GitHub and click **"Use this template" -> "Create a new repository"**. This creates a new repository under your GitHub organization with the full template structure — including the Helm chart scaffold, README template, CI/CD workflows, and contribution guidelines — already in place.
+
+   ![Use this template](https://docs.github.com/assets/cb-76823/mw-1440/images/help/repository/use-this-template-button.webp)
 
 2. **Define your use case** — Identify a real-world AI problem in a specific industry (healthcare, finance, retail, manufacturing, IT operations, etc.).
 
