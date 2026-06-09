@@ -370,14 +370,15 @@ my-quickstart/
 │       ├── configmap.yaml          # Configuration
 │       ├── secret.yaml             # Secrets (if needed)
 │       └── test-model-access.yaml  # Helm test for model connectivity
-├── frontend/                       # Frontend application source
-│   ├── app.py / src/               # Application code
+├── frontend/                       # React frontend (PatternFly)
+│   ├── src/                        # React components and pages
+│   ├── package.json                # Node.js dependencies
 │   ├── Containerfile               # Container build file
-│   └── requirements.txt            # Dependencies
-├── backend/                        # Backend application source
-│   ├── app.py / src/               # Application code
+│   └── tsconfig.json               # TypeScript configuration
+├── backend/                        # Backend API service
+│   ├── src/                        # Application code
 │   ├── Containerfile               # Container build file
-│   └── requirements.txt            # Dependencies
+│   └── requirements.txt            # Python dependencies
 ├── mcp_servers/                    # Custom MCP servers (if needed)
 ├── docs/
 │   └── images/                     # Architecture diagrams and screenshots
