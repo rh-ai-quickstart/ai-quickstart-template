@@ -1,0 +1,45 @@
+# Pull Request - Build Test
+#
+# Validates that container images build successfully and the Helm chart
+# deploys correctly on a Kind cluster.
+#
+# CONTRIBUTOR TODO:
+#   - Update the Kind action inputs to match your services
+#   - Adjust the pod readiness check labels
+
+name: "PR - Build Test"
+
+on:
+  pull_request:
+    branches: [dev]
+
+concurrency:
+  group: pr-build-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/prepare-runner
+
+      - name: Create Kind cluster and deploy
+        uses: ./.github/actions/kind
+        with:
+          namespace: build-test
+
+      # CONTRIBUTOR TODO: update the label selector to match your app
+      - name: Verify pods are running
+        run: |
+          kubectl wait --for=condition=ready pod \
+            --all -n build-test \
+            --timeout=300s
+
+      - name: Show deployment status
+        if: always()
+        run: |
+          kubectl get pods -n build-test
+          kubectl get svc -n build-test

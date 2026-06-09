@@ -1,0 +1,65 @@
+# Create Kind Cluster
+#
+# Composite action that creates a Kind cluster with a local registry,
+# builds and loads container images, and deploys the quickstart with Helm.
+#
+# CONTRIBUTOR TODO:
+#   - Update the service list in the "Build and load images" step
+#   - Update the Helm install command to match your chart path and values
+
+name: "Create Kind Cluster"
+description: "Creates a Kind cluster, builds images, and deploys the quickstart"
+
+inputs:
+  namespace:
+    description: "Kubernetes namespace for deployment"
+    required: true
+    default: "test"
+
+runs:
+  using: composite
+  steps:
+    - name: Install Kind
+      shell: bash
+      run: |
+        [ -f /usr/local/bin/kind ] && exit 0
+        curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.24.0/kind-linux-amd64
+        chmod +x /usr/local/bin/kind
+
+    - name: Create Kind cluster
+      shell: bash
+      run: |
+        kind create cluster --name ci-test --wait 120s
+        kubectl cluster-info --context kind-ci-test
+
+    - name: Create namespace
+      shell: bash
+      run: kubectl create namespace ${{ inputs.namespace }}
+
+    # CONTRIBUTOR TODO: update the service list to match your project
+    - name: Build and load images
+      shell: bash
+      run: |
+        for svc in frontend backend; do
+          if [ -d "./${svc}" ] && [ -f "./${svc}/Containerfile" ]; then
+            echo "Building ${svc}..."
+            docker build -t localhost/${svc}:test -f ./${svc}/Containerfile ./${svc}
+            kind load docker-image localhost/${svc}:test --name ci-test
+          fi
+        done
+
+    - name: Install Helm
+      uses: azure/setup-helm@v4
+
+    - name: Update Helm dependencies
+      shell: bash
+      run: helm dependency update ./chart
+
+    # CONTRIBUTOR TODO: update helm install to match your chart and values
+    - name: Deploy with Helm
+      shell: bash
+      run: |
+        helm install my-quickstart ./chart \
+          --namespace ${{ inputs.namespace }} \
+          --wait --timeout 5m \
+          || (kubectl get pods -n ${{ inputs.namespace }} && exit 1)

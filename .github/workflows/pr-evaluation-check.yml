@@ -1,0 +1,47 @@
+# Pull Request - Evaluation Check
+#
+# Validates that the evaluation framework correctly catches known-bad
+# conversations. This ensures evaluation metrics don't regress.
+#
+# CONTRIBUTOR TODO:
+#   - Remove this workflow if your quickstart does not have an evaluation framework
+#   - Update the make target to match your evaluation setup
+
+name: "PR - Evaluation Check"
+
+on:
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  check-known-bad:
+    name: Check Known-Bad Conversations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.9"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # CONTRIBUTOR TODO: update to match your evaluation framework
+      # Example:
+      # - name: Check known-bad conversations
+      #   run: make check-known-bad-conversations
+      - name: Check known-bad conversations
+        run: |
+          echo "CONTRIBUTOR TODO: Add your evaluation check commands here"
+          echo "Example: make check-known-bad-conversations"
+
+      - name: Upload evaluation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: known-bad-results-${{ github.run_id }}
+          path: evaluations/results/
+          retention-days: 30
+          if-no-files-found: ignore

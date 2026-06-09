@@ -1,0 +1,72 @@
+# Create Dev to Main PR
+#
+# Automates promotion from dev to main with validation:
+#   - Checks for branch divergence (main must not have commits not in dev)
+#   - Validates version consistency across Makefile and Chart.yaml
+#   - Creates a PR from dev to main
+#
+# CONTRIBUTOR TODO:
+#   - Ensure your Makefile has a BASE_VERSION variable
+#   - Ensure chart/Chart.yaml has an appVersion field
+
+name: "Promote Dev to Main"
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  promote:
+    name: Create Promotion PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check branch divergence
+        run: |
+          git fetch origin main dev
+          BEHIND=$(git rev-list --count origin/dev..origin/main)
+          if [ "$BEHIND" -gt 0 ]; then
+            echo "::error::main has $BEHIND commit(s) not in dev. Rebase dev on main first."
+            exit 1
+          fi
+          AHEAD=$(git rev-list --count origin/main..origin/dev)
+          echo "dev is $AHEAD commit(s) ahead of main."
+
+      - name: Validate version consistency
+        run: |
+          MK_VER=$(grep '^BASE_VERSION' Makefile | cut -d'=' -f2 | tr -d ' ' || echo "")
+          CHART_VER=$(grep '^appVersion' chart/Chart.yaml | sed 's/.*"\(.*\)".*/\1/' || echo "")
+
+          if [ -z "$MK_VER" ]; then
+            echo "::warning::No BASE_VERSION found in Makefile, skipping version check"
+            exit 0
+          fi
+
+          if [ "$MK_VER" != "$CHART_VER" ]; then
+            echo "::error::Version mismatch: Makefile BASE_VERSION=$MK_VER, Chart.yaml appVersion=$CHART_VER"
+            exit 1
+          fi
+          echo "Version $MK_VER is consistent across files."
+
+      - name: Create promotion PR
+        run: |
+          MK_VER=$(grep '^BASE_VERSION' Makefile | cut -d'=' -f2 | tr -d ' ' || echo "unknown")
+          gh pr create --base main --head dev \
+            --title "Promote dev to main (v${MK_VER})" \
+            --body "$(cat <<'PREOF'
+          ## Promotion PR
+
+          Automated promotion of \`dev\` branch to \`main\`.
+
+          **Version:** ${MK_VER}
+
+          ### Pre-merge checklist
+          - [ ] All PR checks pass on dev
+          - [ ] Nightly E2E tests are green
+          - [ ] Version has been bumped since last promotion
+          PREOF
+          )"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

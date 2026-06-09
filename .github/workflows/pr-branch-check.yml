@@ -1,0 +1,30 @@
+# Require dev branch for main PRs
+#
+# Enforces that PRs to main only come from the dev branch (or a
+# dev-<commit> temporary promotion branch). This ensures all changes
+# flow through dev before reaching main.
+
+name: "PR - Branch Check"
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-branch:
+    name: Validate Source Branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check source branch
+        run: |
+          SOURCE="${{ github.head_ref }}"
+          if [[ "$SOURCE" != "dev" && ! "$SOURCE" =~ ^dev-[a-f0-9]+$ ]]; then
+            echo "::error::PRs to main must originate from the 'dev' branch."
+            echo "Current source branch: $SOURCE"
+            echo ""
+            echo "Workflow:"
+            echo "  1. Merge your changes to 'dev' first"
+            echo "  2. Create a PR from 'dev' to 'main'"
+            exit 1
+          fi
+          echo "Source branch '$SOURCE' is valid."

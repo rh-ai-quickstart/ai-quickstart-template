@@ -771,7 +771,7 @@ Because LLM outputs are non-deterministic, quickstarts with AI agents should inc
 evaluations/
 ├── conversations_config/
 │   └── conversations/          # Predefined conversation flows
-│       ├── ticket_laptop_refresh.yaml
+│       ├── my_use_case_flow.yaml
 │       └── known_bad/          # Known-bad conversations for regression
 ├── evaluate.py                 # Orchestrator: generate + evaluate
 ├── generator.py                # Synthetic conversation generator
@@ -781,6 +781,8 @@ evaluations/
 └── tests/
     └── test_evaluation.py      # Evaluation test entry points
 ```
+
+Define conversation flows specific to your use case (e.g., a customer support flow, a document retrieval flow, a multi-step agent workflow). Known-bad conversations should exercise failure modes that your metrics must catch.
 
 **Evaluation test sizes for CI:**
 
@@ -793,14 +795,12 @@ evaluations/
 
 **Example evaluation metrics** (assessed by a judge LLM):
 
-- Turn Relevancy
-- Role Adherence
-- Conversation Completeness
-- Information Gathering
-- Policy Compliance
-- Option Presentation
-- Process Completion
-- Ticket Number Validation
+- Turn Relevancy — Are responses on-topic for each conversation turn?
+- Role Adherence — Does the agent stay within its defined persona and scope?
+- Conversation Completeness — Does the agent gather all required information?
+- Policy Compliance — Does the agent follow business rules and guidelines?
+- Factual Accuracy — Are RAG-grounded responses factually correct?
+- Safety Compliance — Are guardrails correctly applied to block harmful content?
 
 ### Helm Chart Validation
 

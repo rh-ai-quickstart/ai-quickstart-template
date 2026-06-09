@@ -1,0 +1,33 @@
+# Prepare CI Runner
+#
+# Frees disk space on GitHub Actions runners and reports available
+# system resources. Useful for workflows that build large container
+# images or deploy GPU-intensive workloads.
+
+name: "Prepare CI Runner"
+description: "Frees disk space and reports system resources"
+
+runs:
+  using: composite
+  steps:
+    - name: Free disk space
+      shell: bash
+      run: |
+        echo "Disk space before cleanup:"
+        df -h /
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc 2>/dev/null || true
+        echo ""
+        echo "Disk space after cleanup:"
+        df -h /
+
+    - name: Report system resources
+      shell: bash
+      run: |
+        echo "=== Memory ==="
+        free -h
+        echo ""
+        echo "=== CPUs ==="
+        nproc
+        echo ""
+        echo "=== Disk ==="
+        df -h /
