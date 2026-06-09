@@ -42,6 +42,7 @@
   - [Validating the deployment](#validating-the-deployment)
   - [Delete](#delete)
 - [Repository structure](#repository-structure)
+- [Architecture](ARCHITECTURE.md)
 - [References](#references)
 - [Technical details](#technical-details)
 - [Tags](#tags)
