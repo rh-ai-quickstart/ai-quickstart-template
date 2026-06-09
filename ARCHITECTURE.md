@@ -20,6 +20,32 @@
   - [Model Deployment Options](#model-deployment-options)
   - [Contribution Guidelines](#contribution-guidelines)
 - [Existing Quickstarts](#existing-quickstarts)
+- [Testing Best Practices](#testing-best-practices)
+  - [Testing Strategy](#testing-strategy)
+  - [Unit Tests](#unit-tests)
+  - [Integration Tests](#integration-tests)
+  - [LLM Evaluation Framework](#llm-evaluation-framework)
+  - [Helm Chart Validation](#helm-chart-validation)
+- [Code Quality](#code-quality)
+  - [Linting](#linting)
+  - [Formatting](#formatting)
+  - [Type Checking](#type-checking)
+  - [Custom Code Quality Rules](#custom-code-quality-rules)
+- [Git Workflow and Configuration](#git-workflow-and-configuration)
+  - [Branch Strategy](#branch-strategy)
+  - [Version Management](#version-management)
+  - [Dependency Management](#dependency-management)
+  - [Container Build Patterns](#container-build-patterns)
+- [GitHub Actions CI/CD](#github-actions-cicd)
+  - [PR Quality Checks](#pr-quality-checks)
+  - [PR Integration and E2E Tests](#pr-integration-and-e2e-tests)
+  - [PR Evaluation Check](#pr-evaluation-check)
+  - [PR Build Test](#pr-build-test)
+  - [PR Branch Enforcement](#pr-branch-enforcement)
+  - [Build and Push Images](#build-and-push-images)
+  - [Nightly E2E Tests](#nightly-e2e-tests)
+  - [Promotion and Version Bump](#promotion-and-version-bump)
+  - [Custom GitHub Actions](#custom-github-actions)
 - [Key Technology Components](#key-technology-components)
 - [Community and Ecosystem](#community-and-ecosystem)
 - [References](#references)
@@ -558,6 +584,756 @@ The following quickstarts are available today, spanning multiple industries and 
 | **Industry** | Financial Services |
 | **AI Pattern** | Multi-agent workflow |
 | **Key Features** | Pre-qualification, risk assessment, compliance checks (ECOA, ATR/QM), AI-powered underwriting assistant |
+
+---
+
+## Testing Best Practices
+
+AI Quickstarts should implement a multi-layered testing strategy that covers code correctness, deployment validation, and AI behavior evaluation.
+
+### Testing Strategy
+
+| Test Layer | Purpose | When It Runs | Tools |
+|------------|---------|-------------|-------|
+| **Unit Tests** | Validate individual functions and service logic | Every PR, every push | pytest |
+| **Integration Tests** | Validate service-to-service communication in a deployed cluster | PR (on cluster), nightly | pytest + kubectl exec |
+| **Helm Chart Validation** | Ensure Helm templates render valid Kubernetes manifests | Every PR | kubeconform |
+| **LLM Evaluation** | Assess AI response quality, policy compliance, and conversation completeness | PR (short), nightly (full) | DeepEval, LLM-as-Judge |
+| **Known-Bad Regression** | Verify that evaluation metrics correctly flag known failures | Every PR | DeepEval |
+| **E2E (End-to-End)** | Full deployment on a real or Kind cluster with real LLM interactions | Nightly, pre-promotion | Kind cluster, Helm |
+
+### Unit Tests
+
+Each service in a quickstart should have its own test suite under a `tests/` directory. Use **pytest** as the test runner.
+
+**Recommended `pyproject.toml` pytest configuration:**
+
+```toml
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = ["-ra", "--strict-markers", "--strict-config", "--verbose"]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+```
+
+**For multi-service quickstarts**, define a Makefile target that runs tests across all services:
+
+```makefile
+define run_pytest
+    cd $(1) && uv sync --group dev && uv run python -m pytest tests/
+endef
+
+.PHONY: test-all
+test-all:
+    $(call run_pytest,shared-models)
+    $(call run_pytest,shared-clients)
+    $(call run_pytest,backend)
+    $(call run_pytest,frontend)
+```
+
+### Integration Tests
+
+Integration tests validate that services work together correctly when deployed on a cluster. Run these inside the cluster using `kubectl exec`:
+
+```makefile
+.PHONY: test-session-integration
+test-session-integration:
+    kubectl exec deploy/request-manager -n $(NAMESPACE) -- \
+        python -m pytest tests/integration/ -v --timeout=120
+```
+
+Key patterns:
+- Use configurable URLs (e.g., `REQUEST_MANAGER_URL`) so tests can target different deployments.
+- Add stagger delays (`STAGGER_MS`) for load-balanced multi-pod scenarios.
+- Wrap long-running tests with timeouts to prevent CI hangs.
+
+### LLM Evaluation Framework
+
+Because LLM outputs are non-deterministic, quickstarts with AI agents should include an **evaluation framework** using LLM-as-Judge patterns.
+
+**Recommended structure:**
+
+```
+evaluations/
+├── conversations_config/
+│   └── conversations/          # Predefined conversation flows
+│       ├── ticket_laptop_refresh.yaml
+│       └── known_bad/          # Known-bad conversations for regression
+├── evaluate.py                 # Orchestrator: generate + evaluate
+├── generator.py                # Synthetic conversation generator
+├── deep_eval.py                # DeepEval metric evaluation
+├── run_conversations.py        # Execute conversation flows
+├── flow_registry.py            # Registry of evaluation flows
+└── tests/
+    └── test_evaluation.py      # Evaluation test entry points
+```
+
+**Evaluation test sizes for CI:**
+
+| Target | Conversations | Timeout | When to Run |
+|--------|:------------:|:-------:|-------------|
+| Short | 1 | 120s | Every PR |
+| Medium | 5 | 600s | Pre-merge |
+| Long | 20 | 1800s | Nightly |
+| Concurrent | 10 x 4 workers | 1800s | Nightly |
+
+**Example evaluation metrics** (assessed by a judge LLM):
+
+- Turn Relevancy
+- Role Adherence
+- Conversation Completeness
+- Information Gathering
+- Policy Compliance
+- Option Presentation
+- Process Completion
+- Ticket Number Validation
+
+### Helm Chart Validation
+
+Validate that Helm chart templates render valid Kubernetes manifests using **kubeconform**:
+
+```bash
+helm template my-quickstart ./chart | kubeconform -strict -summary
+```
+
+Include this as a CI step to catch template rendering issues before deployment.
+
+---
+
+## Code Quality
+
+### Linting
+
+Use **flake8** for Python linting with the following recommended configuration:
+
+**`.flake8`:**
+
+```ini
+[flake8]
+max-line-length = 88
+ignore = E203, W503, E501
+max-complexity = 10
+select = E, W, F
+exclude = .git, __pycache__, .venv, evaluations, alembic/versions
+```
+
+### Formatting
+
+Use **Black** for code formatting and **isort** for import sorting. These should be consistent across all services.
+
+**`pyproject.toml`:**
+
+```toml
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+```
+
+**Makefile targets:**
+
+```makefile
+.PHONY: format
+format:
+    uv run isort .
+    uv run black .
+
+.PHONY: lint
+lint: format lint-flake8 lint-mypy check-logging
+```
+
+### Type Checking
+
+Use **mypy** with strict mode for type safety. Run per-directory in multi-service repos:
+
+**`pyproject.toml`:**
+
+```toml
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "shared-clients/src:shared-models/src"
+```
+
+**Makefile target:**
+
+```makefile
+.PHONY: lint-mypy
+lint-mypy:
+    cd agent-service && uv run mypy --strict src/
+    cd request-manager && uv run mypy --strict src/
+    cd backend && uv run mypy --strict src/
+```
+
+Include type stub packages (`types-pyyaml`, `types-requests`) in dev dependencies for complete type coverage.
+
+### Custom Code Quality Rules
+
+For AI applications, enforce **structured logging** patterns to ensure production observability. Create a custom checker script (e.g., `scripts/check_logging_patterns.py`) that validates:
+
+| Rule | Description | Why It Matters |
+|------|-------------|---------------|
+| **LOG001** | No direct `import logging` — use a shared logging configuration | Consistent log format across services |
+| **LOG002** | No `print()` in `src/` directories | All output must go through structured logging |
+| **LOG003** | No f-strings in logger calls — use keyword arguments | Enable structured log aggregation and search |
+
+**Example enforcement:**
+
+```python
+# BAD
+import logging
+logger = logging.getLogger(__name__)
+logger.info(f"Processing request {request_id}")
+
+# GOOD
+from shared_models import configure_logging
+logger = configure_logging(__name__)
+logger.info("Processing request", request_id=request_id)
+```
+
+---
+
+## Git Workflow and Configuration
+
+### Branch Strategy
+
+Quickstarts should use a **two-branch workflow** with promotion:
+
+```
+feature branches ──► dev ──► main
+                      │         │
+                      │         └── Stable/release (triggers image build + push)
+                      └──────────── Development (triggers dev image build)
+```
+
+| Branch | Purpose | Protection |
+|--------|---------|-----------|
+| **main** | Stable, production-ready code | PRs only from `dev`; CI must pass |
+| **dev** | Active development and integration | PRs from feature branches; CI must pass |
+| **feature/\*** | Individual feature or fix work | Merged to `dev` via PR |
+
+Enforce branch protection via a CI workflow that rejects PRs to `main` from any branch other than `dev`:
+
+```yaml
+# .github/workflows/pr-branch-check.yml
+name: Require dev branch for main PRs
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  check-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check source branch
+        run: |
+          if [[ "${{ github.head_ref }}" != "dev" && ! "${{ github.head_ref }}" =~ ^dev- ]]; then
+            echo "ERROR: PRs to main must come from the dev branch"
+            exit 1
+          fi
+```
+
+### Version Management
+
+Maintain consistent versions across three locations:
+
+| File | Field | Example |
+|------|-------|---------|
+| `Makefile` | `BASE_VERSION` | `0.1.0` |
+| `chart/Chart.yaml` | `appVersion` | `0.1.0` |
+| `chart/values.yaml` | `image.tag` | `0.1.0` |
+
+The promotion workflow should validate that all three match and that the dev version is strictly greater than the main version (semantic versioning).
+
+**Tagging convention for container images:**
+
+| Tag | When | Example |
+|-----|------|---------|
+| `{version}` | Every build | `0.1.0` |
+| `{version}-{short-sha}` | Every build | `0.1.0-a1b2c3d` |
+| `latest` | Push to `main` | `latest` |
+| `{branch}` | Push to `dev` | `dev` |
+
+### Dependency Management
+
+Use **uv** as the Python package manager. Pin the uv version and validate it in CI:
+
+**Makefile:**
+
+```makefile
+REQUIRED_UV_VERSION := 0.8.9
+
+.PHONY: check-uv-version
+check-uv-version:
+    @CURRENT=$$(uv --version | awk '{print $$2}'); \
+    if [ "$$CURRENT" != "$(REQUIRED_UV_VERSION)" ]; then \
+        echo "ERROR: uv version mismatch (expected $(REQUIRED_UV_VERSION), got $$CURRENT)"; \
+        exit 1; \
+    fi
+
+.PHONY: check-lockfiles
+check-lockfiles:
+    @for dir in shared-models shared-clients backend frontend; do \
+        cd $$dir && uv lock --check && cd ..; \
+    done
+
+.PHONY: update-lockfiles
+update-lockfiles:
+    @for dir in shared-models shared-clients backend frontend; do \
+        cd $$dir && uv lock && uv export --frozen --no-hashes > requirements.txt && cd ..; \
+    done
+```
+
+Export `requirements.txt` from lockfiles so containerized builds can use either `uv sync` (fast) or `pip install` (cross-platform fallback).
+
+### Container Build Patterns
+
+Use **multi-stage builds** with UBI9 (Red Hat Universal Base Image) for production containers:
+
+```dockerfile
+# Builder stage
+FROM registry.access.redhat.com/ubi9/python-312:latest AS builder
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Production stage
+FROM registry.access.redhat.com/ubi9/python-312:latest
+COPY --from=builder /opt/app-root /opt/app-root
+COPY src/ ./src/
+USER 1001
+CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+**Best practices:**
+- Use non-root user (`USER 1001`)
+- Support both `uv sync` and `pip install` build paths for cross-architecture compatibility (e.g., QEMU on Mac M1)
+- Include OpenTelemetry instrumentation by default for observability
+- Pin base image versions and keep pip updated for CVE mitigation
+
+**`.dockerignore`:**
+
+```
+.venv
+__pycache__
+.git
+.idea
+.vscode
+*.pyc
+*.pyo
+*.egg-info
+dist/
+build/
+```
+
+---
+
+## GitHub Actions CI/CD
+
+Quickstarts should configure the following GitHub Actions workflows for comprehensive CI/CD. These workflows are organized from most frequent (every PR) to least frequent (nightly/promotion).
+
+### PR Quality Checks
+
+**`.github/workflows/pr-checks.yml`** — Runs on every pull request. Three parallel jobs:
+
+```yaml
+name: "Pull Request - Quality Checks & Unit Tests"
+on:
+  pull_request:
+    branches: [dev, main]
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  code-quality-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.9"
+      - name: Check uv version
+        run: make check-uv-version
+      - name: Check lockfile freshness
+        run: make check-lockfiles
+      - name: Check requirements.txt sync
+        run: make check-requirements
+      - name: Run flake8
+        run: uv run flake8 .
+      - name: Check formatting (black)
+        run: uv run black --check .
+      - name: Check imports (isort)
+        run: uv run isort --check-only .
+      - name: Run mypy (per-directory)
+        run: make lint-mypy
+      - name: Check logging patterns
+        run: python scripts/check_logging_patterns.py
+
+  helm-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
+            | tar xz -C /usr/local/bin
+      - name: Validate Helm templates
+        run: helm template my-quickstart ./chart | kubeconform -strict -summary
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.9"
+      - name: Run all unit tests
+        run: make test-all
+```
+
+### PR Integration and E2E Tests
+
+**`.github/workflows/pr-e2e-tests.yml`** — Runs integration and short evaluation tests. Uses `pull_request_target` for safe access to secrets when testing fork PRs:
+
+```yaml
+name: "Pull Request - Integration & E2E Tests"
+on:
+  pull_request_target:
+    branches: [dev]
+  schedule:
+    - cron: "0 6 * * *"   # Daily fallback
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Kind cluster
+        uses: ./.github/actions/kind
+        with:
+          namespace: test-ns
+      - name: Run integration tests
+        run: |
+          make test-session-integration NAMESPACE=test-ns
+      - name: Run short evaluation (1 conversation)
+        run: |
+          make test-short-eval NAMESPACE=test-ns
+        env:
+          LLM_URL: ${{ secrets.LLM_URL }}
+          LLM_API_TOKEN: ${{ secrets.LLM_API_TOKEN }}
+      - name: Upload evaluation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-results-${{ github.run_id }}
+          path: evaluations/results/
+          retention-days: 30
+```
+
+### PR Evaluation Check
+
+**`.github/workflows/pr-evaluation-check.yml`** — Validates that the evaluation framework correctly catches known-bad conversations:
+
+```yaml
+name: "Pull Request - Evaluation Check"
+on:
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  check-known-bad:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Check known-bad conversations
+        run: make check-known-bad-conversations
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: known-bad-results-${{ github.run_id }}
+          path: evaluations/results/
+          retention-days: 30
+```
+
+### PR Build Test
+
+**`.github/workflows/pr-build-test.yml`** — Validates the container build and Helm deployment on a Kind cluster:
+
+```yaml
+name: "Pull Request - Build Test"
+on:
+  pull_request:
+    branches: [dev]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Kind cluster and deploy
+        uses: ./.github/actions/kind
+        with:
+          namespace: build-test
+      - name: Verify pods are running
+        run: |
+          kubectl wait --for=condition=ready pod -l app=my-quickstart \
+            -n build-test --timeout=300s
+```
+
+### PR Branch Enforcement
+
+**`.github/workflows/pr-branch-check.yml`** — Ensures PRs to `main` only come from `dev`:
+
+```yaml
+name: "Require dev branch for main PRs"
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate source branch
+        run: |
+          SOURCE="${{ github.head_ref }}"
+          if [[ "$SOURCE" != "dev" && ! "$SOURCE" =~ ^dev-[a-f0-9]+$ ]]; then
+            echo "::error::PRs to main must originate from the 'dev' branch."
+            echo "Current source branch: $SOURCE"
+            exit 1
+          fi
+          echo "Source branch '$SOURCE' is valid."
+```
+
+### Build and Push Images
+
+**`.github/workflows/build-and-push.yml`** — Builds and pushes container images on merge to `main` or `dev`:
+
+```yaml
+name: "Build and Push Container Images"
+on:
+  push:
+    branches: [main, dev]
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [frontend, backend, agent-service]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to Quay.io
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+      - name: Determine tags
+        id: tags
+        run: |
+          VERSION=$(grep '^BASE_VERSION' Makefile | cut -d'=' -f2 | tr -d ' ')
+          SHA=$(git rev-parse --short HEAD)
+          TAGS="quay.io/${{ github.repository_owner }}/${{ matrix.service }}:${VERSION}"
+          TAGS="${TAGS},quay.io/${{ github.repository_owner }}/${{ matrix.service }}:${VERSION}-${SHA}"
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            TAGS="${TAGS},quay.io/${{ github.repository_owner }}/${{ matrix.service }}:latest"
+          else
+            TAGS="${TAGS},quay.io/${{ github.repository_owner }}/${{ matrix.service }}:${{ github.ref_name }}"
+          fi
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+```
+
+### Nightly E2E Tests
+
+**`.github/workflows/nightly-e2e.yml`** — Full end-to-end tests with longer conversation counts and multiple LLM configurations:
+
+```yaml
+name: "Nightly - E2E Tests"
+on:
+  schedule:
+    - cron: "0 3 * * *"    # 3 AM UTC daily
+  workflow_dispatch: {}
+
+concurrency:
+  group: nightly-e2e
+  cancel-in-progress: false
+
+jobs:
+  e2e-long:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        prompt_config: [default, small-prompt]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to test cluster
+        run: make helm-install NAMESPACE=nightly-e2e
+        env:
+          LLM_URL: ${{ secrets.LLM_URL }}
+          LLM_API_TOKEN: ${{ secrets.LLM_API_TOKEN }}
+      - name: Run long evaluation (20 conversations)
+        run: |
+          make test-long-eval NAMESPACE=nightly-e2e \
+            PROMPT_CONFIG=${{ matrix.prompt_config }}
+        timeout-minutes: 45
+      - name: Upload evaluation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-eval-${{ matrix.prompt_config }}-${{ github.run_id }}
+          path: evaluations/results/
+          retention-days: 30
+      - name: Cleanup
+        if: always()
+        run: make helm-uninstall NAMESPACE=nightly-e2e
+```
+
+For production-like testing with real external systems (e.g., ServiceNow), create a separate nightly workflow that deploys to a shared namespace with `cancel-in-progress: false` to prevent simultaneous usage.
+
+### Promotion and Version Bump
+
+**`.github/workflows/create-dev-to-main-pr.yml`** — Automates promotion from `dev` to `main` with validation:
+
+```yaml
+name: "Create Dev to Main PR"
+on:
+  workflow_dispatch: {}
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check branch divergence
+        run: |
+          git fetch origin main dev
+          BEHIND=$(git rev-list --count origin/dev..origin/main)
+          if [ "$BEHIND" -gt 0 ]; then
+            echo "::error::main has $BEHIND commits not in dev. Rebase dev first."
+            exit 1
+          fi
+      - name: Validate version consistency
+        run: |
+          MK_VER=$(grep '^BASE_VERSION' Makefile | cut -d'=' -f2 | tr -d ' ')
+          CHART_VER=$(grep '^appVersion' chart/Chart.yaml | cut -d'"' -f2)
+          if [ "$MK_VER" != "$CHART_VER" ]; then
+            echo "::error::Version mismatch: Makefile=$MK_VER, Chart.yaml=$CHART_VER"
+            exit 1
+          fi
+      - name: Create PR
+        run: |
+          gh pr create --base main --head dev \
+            --title "Promote dev to main (v${MK_VER})" \
+            --body "Automated promotion PR"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+**`.github/workflows/version-bump.yml`** — Auto-increments patch version across all files:
+
+```yaml
+name: "Version Bump"
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version component to bump"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+```
+
+### Custom GitHub Actions
+
+Create reusable composite actions under `.github/actions/` for common CI tasks:
+
+**`.github/actions/kind/action.yaml`** — Spin up a Kind cluster with local registry for integration testing:
+
+```yaml
+name: "Create Kind Cluster"
+description: "Creates a Kind cluster with local registry and deploys the quickstart"
+inputs:
+  namespace:
+    description: "Kubernetes namespace"
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Create Kind cluster
+      shell: bash
+      run: |
+        kind create cluster --name ci-test
+        kubectl create namespace ${{ inputs.namespace }}
+    - name: Build and load images
+      shell: bash
+      run: |
+        for svc in frontend backend; do
+          docker build -t localhost:5000/${svc}:test ./${svc}
+          kind load docker-image localhost:5000/${svc}:test --name ci-test
+        done
+    - name: Deploy with Helm
+      shell: bash
+      run: |
+        helm install my-quickstart ./chart \
+          --namespace ${{ inputs.namespace }} \
+          --wait --timeout 5m
+```
+
+**`.github/actions/prepare-runner/action.yaml`** — Free disk space on CI runners for GPU-heavy workloads:
+
+```yaml
+name: "Prepare CI Runner"
+description: "Frees disk space and reports system resources"
+runs:
+  using: composite
+  steps:
+    - name: Free disk space
+      shell: bash
+      run: |
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        df -h
+    - name: Report resources
+      shell: bash
+      run: |
+        echo "Memory:" && free -h
+        echo "Disk:" && df -h
+        echo "CPUs:" && nproc
+```
+
+### Summary of Recommended Workflows
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `pr-checks.yml` | Every PR | Linting, formatting, type checks, unit tests, lockfile validation |
+| `pr-e2e-tests.yml` | PR to dev | Integration tests + short LLM evaluation on Kind cluster |
+| `pr-evaluation-check.yml` | Every PR | Validate known-bad conversations are caught |
+| `pr-build-test.yml` | PR to dev | Container build + Helm deployment validation |
+| `pr-branch-check.yml` | PR to main | Enforce dev-to-main promotion path |
+| `build-and-push.yml` | Push to main/dev | Build and push container images to registry |
+| `nightly-e2e.yml` | Cron (daily) | Full evaluation with 20+ conversations, multiple LLM configs |
+| `create-dev-to-main-pr.yml` | Manual dispatch | Automated promotion with version validation |
+| `version-bump.yml` | Manual dispatch | Auto-increment version across Makefile + Chart.yaml + values.yaml |
 
 ---
 
