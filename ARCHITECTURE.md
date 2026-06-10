@@ -344,15 +344,24 @@ helm install my-app ./chart --namespace my-project \
 
    ![Use this template](https://docs.github.com/assets/cb-76823/mw-1440/images/help/repository/use-this-template-button.webp)
 
-2. **Define your use case** — Identify a real-world AI problem in a specific industry (healthcare, finance, retail, manufacturing, IT operations, etc.).
+2. **Scaffold your application with the CLI** — Use the [AI QuickStart CLI](https://github.com/rh-ai-quickstart/quickstart-cli) to generate a production-ready sample app with React, FastAPI, and optional database support:
 
-3. **Select your components** — Choose which architecture charts your quickstart needs from the [shared chart library](#ai-architecture-helm-charts).
+   ```bash
+   npm install -g @rh-ai-quickstart/cli
+   quickstart create my-app --packages api,ui,db
+   ```
 
-4. **Build your application** — Implement the frontend, backend, and any custom logic specific to your use case.
+   The CLI scaffolds a full-stack monorepo with React + Tailwind CSS frontend, FastAPI backend, PostgreSQL database, developer tooling (commitlint, Husky, Storybook), and testing infrastructure — ready to build on.
 
-5. **Package as a Helm chart** — Wire everything together in a single Helm chart that deploys the complete stack.
+3. **Define your use case** — Identify a real-world AI problem in a specific industry (healthcare, finance, retail, manufacturing, IT operations, etc.).
 
-6. **Document thoroughly** — Follow the README template structure so users can understand, deploy, and extend your quickstart.
+4. **Select your components** — Choose which architecture charts your quickstart needs from the [shared chart library](#ai-architecture-helm-charts).
+
+5. **Build your application** — Implement the frontend, backend, and any custom logic specific to your use case.
+
+6. **Package as a Helm chart** — Wire everything together in a single Helm chart that deploys the complete stack.
+
+7. **Document thoroughly** — Follow the README template structure so users can understand, deploy, and extend your quickstart.
 
 ### Repository Structure
 
@@ -1463,6 +1472,7 @@ runs:
 | **[Helm](https://helm.sh/)** | Kubernetes package manager used for all quickstart deployment |
 | **[Tailwind CSS](https://tailwindcss.com/)** | Utility-first CSS framework for building custom user interfaces |
 | **[FastAPI](https://fastapi.tiangolo.com/)** | Modern Python web framework for building backend APIs with automatic OpenAPI docs |
+| **[AI QuickStart CLI](https://github.com/rh-ai-quickstart/quickstart-cli)** | CLI tool to scaffold production-ready full-stack apps with React, FastAPI, and PostgreSQL |
 
 ---
 
