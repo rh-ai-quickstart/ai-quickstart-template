@@ -1,0 +1,63 @@
+# Pull Request - Integration & E2E Tests
+#
+# Runs integration tests and a short LLM evaluation on a Kind cluster.
+# Uses pull_request_target for safe access to secrets when testing fork PRs.
+#
+# CONTRIBUTOR TODO:
+#   - Update the Kind action inputs to match your services
+#   - Configure LLM_URL and LLM_API_TOKEN secrets in your repo settings
+#   - Update make targets to match your Makefile
+
+name: "PR - Integration & E2E Tests"
+
+on:
+  pull_request_target:
+    branches: [dev]
+  schedule:
+    - cron: "0 6 * * *"
+
+concurrency:
+  group: pr-e2e-${{ github.event.pull_request.number || 'scheduled' }}
+  cancel-in-progress: true
+
+jobs:
+  integration-tests:
+    name: Integration & E2E
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: ./.github/actions/prepare-runner
+
+      - name: Create Kind cluster and deploy
+        uses: ./.github/actions/kind
+        with:
+          namespace: e2e-test
+
+      # CONTRIBUTOR TODO: add your integration test commands
+      # Example:
+      # - name: Run integration tests
+      #   run: |
+      #     kubectl exec deploy/request-manager -n e2e-test -- \
+      #       python -m pytest tests/integration/ -v --timeout=120
+
+      # CONTRIBUTOR TODO: add short evaluation if your quickstart has an evaluation framework
+      # Example:
+      # - name: Run short evaluation (1 conversation)
+      #   run: make test-short-eval NAMESPACE=e2e-test
+      #   env:
+      #     LLM_URL: ${{ secrets.LLM_URL }}
+      #     LLM_API_TOKEN: ${{ secrets.LLM_API_TOKEN }}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ github.run_id }}
+          path: |
+            evaluations/results/
+            test-results/
+          retention-days: 30
+          if-no-files-found: ignore

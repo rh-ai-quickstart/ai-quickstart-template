@@ -1,0 +1,75 @@
+# Nightly - E2E Tests
+#
+# Runs full end-to-end evaluation with longer conversation counts and
+# optionally multiple LLM configurations. Scheduled nightly.
+#
+# CONTRIBUTOR TODO:
+#   - Configure LLM_URL and LLM_API_TOKEN secrets in your repo settings
+#   - Update make targets and conversation counts for your evaluation framework
+#   - Add prompt_config matrix entries if you have multiple prompt configurations
+#   - Remove this workflow if your quickstart does not have an evaluation framework
+
+name: "Nightly - E2E Tests"
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: nightly-e2e
+  cancel-in-progress: false
+
+jobs:
+  e2e-evaluation:
+    name: E2E Evaluation
+    runs-on: ubuntu-latest
+    # CONTRIBUTOR TODO: add prompt_config matrix if needed
+    # strategy:
+    #   matrix:
+    #     prompt_config: [default, small-prompt]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/prepare-runner
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.9"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Create Kind cluster and deploy
+        uses: ./.github/actions/kind
+        with:
+          namespace: nightly-e2e
+
+      # CONTRIBUTOR TODO: update evaluation commands for your quickstart
+      # Example:
+      # - name: Run full evaluation (20 conversations)
+      #   run: make test-long-eval NAMESPACE=nightly-e2e
+      #   timeout-minutes: 45
+      #   env:
+      #     LLM_URL: ${{ secrets.LLM_URL }}
+      #     LLM_API_TOKEN: ${{ secrets.LLM_API_TOKEN }}
+      - name: Run evaluation
+        run: |
+          echo "CONTRIBUTOR TODO: Add your nightly evaluation commands here"
+          echo "Example: make test-long-eval NAMESPACE=nightly-e2e"
+        timeout-minutes: 45
+
+      - name: Upload evaluation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-eval-${{ github.run_id }}
+          path: evaluations/results/
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Cleanup
+        if: always()
+        run: |
+          kind delete cluster --name ci-test 2>/dev/null || true

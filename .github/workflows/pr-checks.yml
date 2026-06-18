@@ -1,0 +1,96 @@
+# Pull Request - Quality Checks & Unit Tests
+#
+# Runs on every pull request to dev or main.
+# Three parallel jobs: code quality, Helm validation, and unit tests.
+#
+# CONTRIBUTOR TODO:
+#   - Update the uv version to match your project
+#   - Add/remove lint and test targets in the Makefile
+#   - Add service directories to the mypy and test steps if needed
+
+name: "PR - Quality Checks & Unit Tests"
+
+on:
+  pull_request:
+    branches: [dev, main]
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.9"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dev dependencies
+        run: uv sync --group dev
+
+      - name: Check formatting (black)
+        run: uv run black --check .
+
+      - name: Check imports (isort)
+        run: uv run isort --check-only .
+
+      - name: Run flake8
+        run: uv run flake8 .
+
+      # CONTRIBUTOR TODO: uncomment and configure mypy per your project structure
+      # - name: Run mypy
+      #   run: |
+      #     cd backend && uv run mypy --strict src/
+      #     cd ../frontend && uv run mypy --strict src/
+
+  helm-validate:
+    name: Helm Chart Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
+            | tar xz -C /usr/local/bin
+
+      - name: Update Helm dependencies
+        run: helm dependency update ./chart
+
+      - name: Validate Helm templates
+        run: helm template my-quickstart ./chart | kubeconform -strict -summary
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.9"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # CONTRIBUTOR TODO: update to run tests for your services
+      # Example for multi-service:
+      #   make test-all
+      # Example for single service:
+      #   cd backend && uv sync --group dev && uv run pytest tests/
+      - name: Run unit tests
+        run: |
+          echo "CONTRIBUTOR TODO: Add your test commands here"
+          echo "Example: cd backend && uv sync --group dev && uv run pytest tests/"

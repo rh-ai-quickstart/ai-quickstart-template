@@ -1,0 +1,68 @@
+# Build and Push Container Images
+#
+# Builds and pushes container images on merge to main or dev.
+# Tags: version, version-sha, latest (main) or branch name (dev).
+#
+# CONTRIBUTOR TODO:
+#   - Update the service matrix to list your services
+#   - Configure QUAY_USERNAME and QUAY_PASSWORD secrets in your repo settings
+#   - Update the registry and org to match your Quay.io setup
+#   - Ensure each service has a Containerfile in its directory
+
+name: "Build and Push Images"
+
+on:
+  push:
+    branches: [main, dev]
+
+concurrency:
+  group: build-${{ github.ref_name }}
+  cancel-in-progress: true
+
+# CONTRIBUTOR TODO: replace with your Quay.io org
+env:
+  REGISTRY: quay.io
+  IMAGE_ORG: rh-ai-quickstart
+
+jobs:
+  build-push:
+    name: Build ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # CONTRIBUTOR TODO: list your services here
+        service: [frontend, backend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Determine version and tags
+        id: tags
+        run: |
+          VERSION=$(grep '^BASE_VERSION' Makefile | cut -d'=' -f2 | tr -d ' ' || echo "0.1.0")
+          SHA=$(git rev-parse --short HEAD)
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_ORG }}/${{ matrix.service }}"
+
+          TAGS="${IMAGE}:${VERSION},${IMAGE}:${VERSION}-${SHA}"
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            TAGS="${TAGS},${IMAGE}:latest"
+          else
+            TAGS="${TAGS},${IMAGE}:${{ github.ref_name }}"
+          fi
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+          echo "Tags: ${TAGS}"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          file: ./${{ matrix.service }}/Containerfile
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
