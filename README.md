@@ -1,6 +1,6 @@
 # Secure Local AI for Helpdesk Email Triage and PII Redaction
 
-Securely classify helpdesk email by category and urgency with reversible PII tokenization and local RHAII 3.5 CPU inference on RHEL or OpenShift.
+Securely classify helpdesk email by category and urgency with reversible PII tokenization and local Red Hat AI Inference 3.5 CPU on RHEL or OpenShift.
 
 ## Table of Contents
 
@@ -13,9 +13,9 @@ Securely classify helpdesk email by category and urgency with reversible PII tok
   - [Track 1: OpenShift requirements](#track-1-openshift-requirements)
   - [Track 2: RHEL requirements](#track-2-rhel-requirements)
 - [Deploy](#deploy)
-  - [Track 1: Deploy to OpenShift (RHAII CPU)](#track-1-deploy-to-openshift-rhaii-cpu)
+  - [Track 1: Deploy to OpenShift (Red Hat AI Inference CPU)](#track-1-deploy-to-openshift-red-hat-ai-inference-cpu)
     - [Prerequisites](#prerequisites)
-    - [Step 1: Deploy with RHAII CPU](#step-1-deploy-with-rhaii-cpu)
+    - [Step 1: Deploy with Red Hat AI Inference CPU](#step-1-deploy-with-red-hat-ai-inference-cpu)
     - [Step 2: Verify deployment](#step-2-verify-deployment)
     - [Submit support tickets](#submit-support-tickets)
     - [Review classified and redacted emails](#review-classified-and-redacted-emails)
@@ -34,6 +34,8 @@ Securely classify helpdesk email by category and urgency with reversible PII tok
   - [Delete](#delete)
 - [Reference](#reference)
 - [Technical Details](#technical-details)
+  - [Production RHEL with Compose](#production-rhel-with-compose)
+  - [OpenShift hardened pilot](#openshift-hardened-pilot)
   - [Documentation](#documentation)
 - [Tags](#tags)
 
@@ -47,14 +49,14 @@ This quickstart demonstrates how to use CPU-based AI inference on existing RHEL 
 
 **Business and support operations teams** can use the example to assess whether locally hosted AI fits their email triage workflow. It shows how to categorize and prioritize requests, tokenize detected PII before model inference, and measure CPU performance before planning a pilot.
 
-**Platform engineers, AI engineers, and architects** can use this quickstart to run **[Red Hat AI Inference (RHAII) 3.5](https://docs.redhat.com/en/documentation/red_hat_ai_inference/3.5/html/getting_started/about-cpu-inference_getting-started)** on OpenShift or RHEL. You’ll run an instruction-tuned model on **x86_64 with AVX512** (no GPU), connect an app to its OpenAI-compatible endpoint, check readiness and latency, and optionally benchmark it with GuideLLM.
+**Platform engineers, AI engineers, and architects** can use this quickstart to run **[Red Hat AI Inference 3.5](https://docs.redhat.com/en/documentation/red_hat_ai_inference/3.5/html/getting_started/about-cpu-inference_getting-started)** on OpenShift or RHEL. You’ll run an instruction-tuned model on **x86_64 with AVX512** (no GPU), connect an app to its OpenAI-compatible endpoint, check readiness and latency, and optionally benchmark it with GuideLLM.
 
 ### What this quickstart provides
 
 This quickstart has two main components:
 
 - An email gateway that ingests messages, tokenizes detected PII before classification, and returns a ticket result through its API. It can also send results to a configured downstream webhook.
-- An optional Streamlit UI where support agents can review classified tickets, filter by category and urgency, preview downstream JSON, and rehydrate tokenized values when authorized.
+- An optional Streamlit UI where support agents can review classified tickets, filter by category and urgency, preview downstream JSON, and rehydrate tokenized values when authorized. The UI includes persistent AI transparency indicators: a banner on every page stating that category, urgency, and sanitized text are AI-generated and should be verified before routing, and *(AI)* or *(AI-generated)* labels on each classification field (Category, Urgency, Sanitized body, AI summary).
 
 Organizations can integrate the gateway API or reuse parts of the gateway in their existing systems. The Streamlit UI provides a way to review the workflow during evaluation.
 
@@ -62,10 +64,10 @@ Organizations can integrate the gateway API or reuse parts of the gateway in the
 
 The quickstart supports two tracks:
 
-* [Track 1](#track-1-deploy-to-openshift-rhaii-cpu) deploys the stack to OpenShift.
+* [Track 1](#track-1-deploy-to-openshift-red-hat-ai-inference-cpu) deploys the stack to OpenShift.
 * [Track 2](#track-2-run-on-rhel-with-systemd-quadlet) runs on RHEL with systemd and Quadlet.
 
-Both use RHAII 3.5 CPU and follow the same email triage workflow; choose the track that matches your environment.
+Both use Red Hat AI Inference 3.5 CPU and follow the same email triage workflow; choose the track that matches your environment.
 
 After either track, you’ll have built and deployed:
 
@@ -81,12 +83,12 @@ After either track, you’ll have built and deployed:
 
 1. **Ingest** — HTTP, SMTP, or file watcher on `.eml` drops.
 2. **Gateway** — Tokenizes structured PII into a vault; exposes `TriageResult` JSON and `/health/ready`.
-3. **Inference** — Classification on **RHAII 3.5 CPU** on tokenized text only.
+3. **Inference** — Classification on **Red Hat AI Inference 3.5 CPU** on tokenized text only.
 4. **Agent inbox** *(optional)* — Streamlit UI to review redaction and classification
 
 ## Requirements
 
-Both tracks run RHAII 3.5 CPU inference; no GPU is required.
+Both tracks run Red Hat AI Inference 3.5 CPU inference; no GPU is required.
 
 ### Track 1: OpenShift requirements
 
@@ -108,7 +110,7 @@ Both tracks run RHAII 3.5 CPU inference; no GPU is required.
 #### Permissions
 
 - Namespace admin (or equivalent) permissions for Routes, Deployments, Secrets, and PVCs
-- Access to a Red Hat account authorized to pull the RHAII image from `registry.redhat.io`
+- Access to a Red Hat account authorized to pull the Red Hat AI Inference image from `registry.redhat.io`
 - Hugging Face token
 
 ### Track 2: RHEL requirements
@@ -127,12 +129,12 @@ Both tracks run RHAII 3.5 CPU inference; no GPU is required.
 #### Permissions
 
 - Permission to use user systemd (`systemctl --user`)
-- Access to a Red Hat account authorized to pull the RHAII image from `registry.redhat.io`
+- Access to a Red Hat account authorized to pull the Red Hat AI Inference image from `registry.redhat.io`
 - Hugging Face token
 
 ## Deploy
 
-### Track 1: Deploy to OpenShift (RHAII CPU)
+### Track 1: Deploy to OpenShift (Red Hat AI Inference CPU)
 
 *~30–45 minutes.*
 
@@ -146,7 +148,7 @@ Both tracks run RHAII 3.5 CPU inference; no GPU is required.
 
 > **Important:** Keep `email-gateway` and `sample-emails` at **1 replica each**. Both components use a single shared PVC (`gateway-data`) for ticket storage and file-watcher state. Running more than one replica causes concurrent writes to the same files, leading to duplicate tickets and corrupted state.
 
-#### Step 1: Deploy with RHAII CPU
+#### Step 1: Deploy with Red Hat AI Inference CPU
 
 ```bash
 git clone https://github.com/rh-ai-quickstart/helpdesk-email-triage && cd helpdesk-email-triage
@@ -255,11 +257,11 @@ content-length: 145
 ==> Found 7 ticket(s) from file watcher
 ```
 
-You should see **Gateway** and **Dashboard** Route URLs, gateway `/health` JSON (with a real model name when RHAII is up), dashboard headers, and at least one ticket.
+You should see **Gateway** and **Dashboard** Route URLs, gateway `/health` JSON (with a real model name when Red Hat AI Inference is up), dashboard headers, and at least one ticket.
 
-Open **`https://<dashboard-route>/welcome`** — the pill should show **RHAII**.
+Open **`https://<dashboard-route>/welcome`** — the pill should show **Red Hat AI Inference**.
 
-![RHAII pill](docs/images/rhaii-pill.png)
+![Red Hat AI Inference pill](docs/images/rhaii-pill.png)
 
 Click on `Open the inbox` in the welcome page (`https://<dashboard-route>/welcome`)
 to open the main dashboard.
@@ -274,7 +276,7 @@ Save your **dashboard** URL (`https://<dashboard-route>/welcome`) and **gateway*
 
 #### Submit support tickets
 
-Try each ingest path below to populate the inbox. After each submission, a new ticket should appear in the queue within a few seconds (longer on the first RHAII classification while the model warms up).
+Try each ingest path below to populate the inbox. After each submission, a new ticket should appear in the queue within a few seconds (longer on the first Red Hat AI Inference classification while the model warms up).
 
 | Method | How |
 |---|---|
@@ -411,17 +413,17 @@ Use these tests to validate that PII redaction and classification are working co
 
    Use the **Queue** dropdown to filter by category and confirm each ticket lands in the expected bucket.
 
-3. **Residual names** — open a ticket whose body contains a full name. RHAII may add `[NAME_N]` tokens in its output. Confirm the **Sanitized body** does not contain the raw name — the gateway merge step rejects model output that drops structured tokens or reintroduces raw PII.
+3. **Residual names** — open a ticket whose body contains a full name. Red Hat AI Inference may add `[NAME_N]` tokens in its output. Confirm the **Sanitized body** does not contain the raw name — the gateway merge step rejects model output that drops structured tokens or reintroduces raw PII.
 
 At this point you can explore the submission channels and the results in the UI before continuing on to load testing.
 
 #### Load testing
 
-In this step you will use [GuideLLM](https://github.com/vllm-project/guidellm) to send synthetic requests to the OpenAI-compatible RHAII inference endpoint. This measures inference throughput and latency; it does not load-test the gateway.
+In this step you will use [GuideLLM](https://github.com/vllm-project/guidellm) to send synthetic requests to the OpenAI-compatible Red Hat AI Inference endpoint. This measures inference throughput and latency; it does not load-test the gateway.
 
 ##### Step 1: Prepare registry access
 
-The benchmark Job uses the Red Hat GuideLLM image. It can use the same `registry.redhat.io` pull secret as RHAII CPU. If the namespace does not already have usable registry credentials, log in from your workstation so the deployment script can create the pull secret:
+The benchmark Job uses the Red Hat GuideLLM image. It can use the same `registry.redhat.io` pull secret as Red Hat AI Inference CPU. If the namespace does not already have usable registry credentials, log in from your workstation so the deployment script can create the pull secret:
 
 ```bash
 podman login registry.redhat.io
@@ -429,7 +431,7 @@ podman login registry.redhat.io
 
 ##### Step 2: Run the benchmark
 
-First deploy the quickstart to your OpenShift project with RHAII CPU inference enabled if you have not done so already.
+First deploy the quickstart to your OpenShift project with Red Hat AI Inference CPU inference enabled if you have not done so already.
 Then run `make guidellm-openshift`:
 
 ```bash
@@ -542,13 +544,13 @@ Example output across several runs (earlier files used smaller `rhaii-cpu-small`
   rate=4: 93/96 ok, e2e_mean=5.2s, tok/s=48.2
 ```
 
-Use the results to size RHAII CPU nodes before a pilot.
+Use the results to size Red Hat AI Inference CPU nodes before a pilot.
 
 ---
 
 ### Track 2: Run on RHEL with systemd (Quadlet)
 
-*~45 minutes. **Recommended for single-host evaluation** — RHAII 3.5 CPU via user systemd, with optional [GuideLLM benchmarking](#step-5-optional-benchmark-inference-with-guidellm).*
+*~45 minutes. **Recommended for single-host evaluation** — Red Hat AI Inference 3.5 CPU via user systemd, with optional [GuideLLM benchmarking](#step-5-optional-benchmark-inference-with-guidellm).*
 
 #### Prerequisites
 
@@ -571,7 +573,7 @@ make quadlet-setup
 
 `make quadlet-setup` creates directories, copies sample mail and docs into `~/helpdesk/`, installs Quadlet units under `~/.config/containers/systemd/`, and creates `~/.config/helpdesk/secrets.env` **only if it does not exist**.
 
-**Edit secrets before RHAII start** (replace with your token path or paste a token):
+**Edit secrets before Red Hat AI Inference start** (replace with your token path or paste a token):
 
 ```bash
 cat > ~/.config/helpdesk/secrets.env <<EOF
@@ -616,7 +618,7 @@ systemctl --user add-wants default.target \
   rhaii-cpu-engine.service email-gateway.service agent-dashboard.service
 ```
 
-Watch RHAII come up (first start downloads weights). If `journalctl --user` prints **No journal files were found**, use **Podman logs** (always works) or enable linger and open a new SSH session:
+Watch Red Hat AI Inference come up (first start downloads weights). If `journalctl --user` prints **No journal files were found**, use **Podman logs** (always works) or enable linger and open a new SSH session:
 
 ```bash
 podman logs -f rhaii-cpu-engine
@@ -636,11 +638,11 @@ curl -sS http://127.0.0.1:8080/tickets | python3 -m json.tool | head -20
 curl -sI http://127.0.0.1:8501/welcome | head -5
 ```
 
-Open **[http://127.0.0.1:8501/welcome](http://127.0.0.1:8501/welcome)** — the pill should show **RHAII**. On the inbox, **Model** in the sidebar reflects the **first ticket** in the queue; triage a new **Quick demo scenario** if older tickets still say `heuristic-fallback` from a cold start.
+Open **[http://127.0.0.1:8501/welcome](http://127.0.0.1:8501/welcome)** — the pill should show **Red Hat AI Inference**. On the inbox, **Model** in the sidebar reflects the **first ticket** in the queue; triage a new **Quick demo scenario** if older tickets still say `heuristic-fallback` from a cold start.
 
 From a laptop, SSH port-forward: `ssh -L 8501:127.0.0.1:8501 -L 8080:127.0.0.1:8080 ec2-user@<host>`.
 
-**Troubleshooting:** `make guidellm-quadlet` asks for `HF_TOKEN` / `HUGGING_FACE_HUB_TOKEN` → put a real token in `~/.config/helpdesk/secrets.env` (not `hf_your_token_here`). `curl …/health/ready` failing → fix `rhaii-cpu-engine` (`podman logs rhaii-cpu-engine --tail 80`): `HUGGING_FACE_HUB_TOKEN` in `secrets.env`, registry login, **≥16 GiB RAM**. **`/health` shows `"classify_model":""` or `/welcome` does not show RHAII** on a host deployed before a repo update → re-copy `deploy/quadlet/email-gateway.container` to `~/.config/containers/systemd/`, then `systemctl --user daemon-reload && systemctl --user restart email-gateway` (the unit sets `MODEL_NAME` for the welcome pill). Sidebar **Model `heuristic-fallback`** with healthy inference → stale tickets from early ingest; triage a new scenario or stop the gateway, `podman volume rm gateway-data`, and `make quadlet-up` again. After other Quadlet unit changes, same `cp` / `daemon-reload` / restart pattern. Details: [deploy/quadlet/README.md](deploy/quadlet/README.md).
+**Troubleshooting:** `make guidellm-quadlet` asks for `HF_TOKEN` / `HUGGING_FACE_HUB_TOKEN` → put a real token in `~/.config/helpdesk/secrets.env` (not `hf_your_token_here`). `curl …/health/ready` failing → fix `rhaii-cpu-engine` (`podman logs rhaii-cpu-engine --tail 80`): `HUGGING_FACE_HUB_TOKEN` in `secrets.env`, registry login, **≥16 GiB RAM**. **`/health` shows `"classify_model":""` or `/welcome` does not show Red Hat AI Inference** on a host deployed before a repo update → re-copy `deploy/quadlet/email-gateway.container` to `~/.config/containers/systemd/`, then `systemctl --user daemon-reload && systemctl --user restart email-gateway` (the unit sets `MODEL_NAME` for the welcome pill). Sidebar **Model `heuristic-fallback`** with healthy inference → stale tickets from early ingest; triage a new scenario or stop the gateway, `podman volume rm gateway-data`, and `make quadlet-up` again. After other Quadlet unit changes, same `cp` / `daemon-reload` / restart pattern. Details: [deploy/quadlet/README.md](deploy/quadlet/README.md).
 
 #### Step 4: Hands-on validation (same checklist as Track 1)
 
@@ -661,7 +663,7 @@ Optional extra ingest:
 
 #### Step 5 (optional): Benchmark inference with GuideLLM
 
-Use GuideLLM to measure throughput and latency at the RHAII inference endpoint. Before benchmarking, make sure the Quadlet stack is up and `curl -sf http://127.0.0.1:8080/health/ready` succeeds from the repository root. GuideLLM loads the Hugging Face tokenizer, so set a real **`HUGGING_FACE_HUB_TOKEN`** in `~/.config/helpdesk/secrets.env`; a shell `export` alone is not enough.
+Use GuideLLM to measure throughput and latency at the Red Hat AI Inference endpoint. Before benchmarking, make sure the Quadlet stack is up and `curl -sf http://127.0.0.1:8080/health/ready` succeeds from the repository root. GuideLLM loads the Hugging Face tokenizer, so set a real **`HUGGING_FACE_HUB_TOKEN`** in `~/.config/helpdesk/secrets.env`; a shell `export` alone is not enough.
 
 For end-to-end **gateway** load, send parallel `POST /ingest/raw` requests to `http://127.0.0.1:8080`. Include `X-Ingest-Key` when configured.
 
@@ -676,14 +678,14 @@ podman pull registry.redhat.io/rhai/guidellm-rhel9:3.5.0-1787154406
 
 ##### Run the benchmark
 
-By default, the benchmark targets RHAII at `http://127.0.0.1:8000`:
+By default, the benchmark targets Red Hat AI Inference at `http://127.0.0.1:8000`:
 
 ```bash
 make guidellm-quadlet
 # Optional: GUIDELLM_RATE=1,2,4 GUIDELLM_MAX_SECONDS=300 make guidellm-quadlet
 ```
 
-To target RHAII over the Podman network instead, run:
+To target Red Hat AI Inference over the Podman network instead, run:
 
 ```bash
 GUIDELLM_PODMAN_NETWORK=helpdesk GUIDELLM_TARGET=http://rhaii-cpu-engine:8000 make guidellm-quadlet
@@ -702,12 +704,12 @@ make quadlet-down
 
 ### What you've accomplished
 
-- Deployed a **helpdesk triage pipeline** on OpenShift or RHEL (ingest → tokenize → RHAII classify → ticket API).
+- Deployed a **helpdesk triage pipeline** on OpenShift or RHEL (ingest → tokenize → Red Hat AI Inference classify → ticket API).
 - Submitted mail via **multiple ingest paths** and confirmed tickets in the optional Streamlit inbox.
 - Verified **category and urgency** and filtered the queue by classification.
 - Confirmed **PII redaction** (including sender and `ACC-…` account ids) in downstream JSON while retaining authorized vault rehydration.
 - Observed **classification latency** per ticket and in aggregate.
-- Optionally **benchmarked inference** with GuideLLM on RHAII CPU.
+- Optionally **benchmarked inference** with GuideLLM on Red Hat AI Inference CPU.
 
 ### Delete
 
@@ -764,7 +766,7 @@ oc create secret generic helpdesk-secrets \
   --from-literal=INGEST_API_KEY="$INGEST_API_KEY" \
   -n helpdesk-email-triage --dry-run=client -o yaml | oc apply -f -
 
-# RHAII CPU + hardening (recommended pilot):
+# Red Hat AI Inference CPU + hardening (recommended pilot):
 INFERENCE=rhaii OVERLAY=deploy/openshift/overlays/hardened make deploy-openshift
 
 # Mock + hardening (overlay smoke only):
@@ -793,9 +795,9 @@ HTTP ingest then requires `X-Ingest-Key`. Pin images: `IMAGE_TAG=v1.2.3 make dep
 
 ## Tags
 
-- **Title:** Triage support emails while protecting sensitive data
-- **Description:** Classify support emails and redact PII locally, helping teams protect sensitive data while streamlining helpdesk triage.
-- **Industry:** Information technology
-- **Product:** Red Hat AI Inference
-- **Use case:** Helpdesk email triage and PII redaction
-- **Contributor org:** Red Hat
+- Title: Triage support emails while protecting sensitive data
+- Description: Classify support emails and redact PII locally, helping teams protect sensitive data while streamlining helpdesk triage.
+- Industry: Information technology
+- Product: Red Hat AI Inference
+- Use case: Helpdesk email triage and PII redaction
+- Contributor org: Red Hat
