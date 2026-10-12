@@ -423,7 +423,6 @@ Replace `YOUR_API_KEY`, `YOUR_MODEL_NAME`, and `YOUR_MODEL_ENDPOINT` with your a
 > - **Product:** Primary Red Hat product (e.g., OpenShift AI, OpenShift, RHEL)
 > - **Use case:** Optional descriptor (e.g., security, automation, productivity)
 > - **Partner:** Optional, list partners if applicable (e.g., NVIDIA, Intel)
-> - **Contributor org:** Defaults to "Red Hat" unless partner or community contribution
 >
 > **Example:**
 >
@@ -433,4 +432,3 @@ Replace `YOUR_API_KEY`, `YOUR_MODEL_NAME`, and `YOUR_MODEL_ENDPOINT` with your a
 > **Product:** OpenShift AI  
 > **Use case:** Security, compliance  
 > **Partner:** N/A  
-> **Contributor org:** Red Hat
