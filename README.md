@@ -1,13 +1,15 @@
 # Secure Local AI for Helpdesk Email Triage and PII Redaction
 
-Classify helpdesk emails by category and urgency with PII tokenization and CPU-based Red Hat AI Inference on RHEL or OpenShift.
+Classify helpdesk emails by category and urgency with PII tokenization and CPU-based Red Hat® AI Inference on Red Hat® Enterprise Linux® (RHEL) or OpenShift.
+
+> **AI-generated content:** This quickstart uses AI to classify emails and detect PII. Verify category, urgency, and sanitized text before routing tickets or making business decisions.
 
 ## Table of contents
 
 - [Overview](#overview)
   - [Who is this for?](#who-is-this-for)
   - [What this quickstart provides](#what-this-quickstart-provides)
-    - [AI transparency and user safety](#ai-transparency-and-user-safety)
+  - [AI transparency and user safety](#ai-transparency-and-user-safety)
   - [What you'll build](#what-youll-build)
   - [See it in action](#see-it-in-action)
   - [Architecture](#architecture)
@@ -56,7 +58,7 @@ Classify helpdesk emails by category and urgency with PII tokenization and CPU-b
 
 Modern enterprises handle thousands of unstructured data streams every day, including customer support emails, contact forms, and IT helpdesk requests. Before these requests can be processed or routed, compliance teams need to ensure that Personally Identifiable Information (PII)—such as credit card numbers, phone numbers, account identifiers, and full names—is securely sanitized to support regulatory requirements such as GDPR, HIPAA, and GLBA. Traditionally, addressing this challenge could mean routing sensitive data to external cloud APIs, increasing data-leakage risk, or provisioning high-performance GPU servers that are expensive and often supply-constrained.
 
-This quickstart demonstrates how to use CPU-based AI inference on existing **Red Hat® Enterprise Linux® (RHEL)** or OpenShift infrastructure to run a lightweight, stateless classification and redaction service locally using **Red Hat® AI Inference**. It focuses on customer support email triage—classifying requests by category and urgency while sanitizing PII—but the same pattern can extend to CRM records, ticketing systems, contact forms, and webhook-based workflows. GuideLLM benchmarking helps teams measure throughput and latency on standard CPU hardware, providing data to assess pilot capacity and support-response SLAs.
+This quickstart demonstrates how to use CPU-based AI inference on existing Red Hat Enterprise Linux (RHEL) or OpenShift infrastructure to run a lightweight, stateless classification and redaction service locally using Red Hat AI Inference. It focuses on customer support email triage—classifying requests by category and urgency while sanitizing PII—but the same pattern can extend to CRM records, ticketing systems, contact forms, and webhook-based workflows. GuideLLM benchmarking helps teams measure throughput and latency on standard CPU hardware, providing data to assess pilot capacity and support-response SLAs.
 
 ### Who is this for?
 
@@ -307,6 +309,8 @@ The main dashboard will look as follows:
 Save your **dashboard** URL (`https://<dashboard-route>/welcome`) and **gateway** URL (`https://<gateway-route-host>`) for the steps below.
 
 #### Submit support tickets
+
+> **Verify AI output:** New tickets show AI-assigned category and urgency — confirm them before treating results as final.
 
 Try each ingest path below to populate the inbox. After each submission, a new ticket should appear in the queue within a few seconds (longer on the first Red Hat AI Inference classification while the model warms up).
 
