@@ -1,8 +1,8 @@
 # Secure Local AI for Helpdesk Email Triage and PII Redaction
 
-Securely classify helpdesk email by category and urgency with reversible PII tokenization and local Red Hat® AI Inference® 3.5 CPU on Red Hat® Enterprise Linux® (RHEL) or OpenShift.
+Classify helpdesk emails by category and urgency with PII tokenization using Red Hat® AI Inference® CPU on Red Hat® Enterprise Linux® (RHEL) or OpenShift.
 
-## Table of Contents
+## Table of contents
 
 - [Overview](#overview)
   - [Who is this for?](#who-is-this-for)
@@ -45,7 +45,7 @@ Securely classify helpdesk email by category and urgency with reversible PII tok
   - [What you've accomplished](#what-youve-accomplished)
   - [Delete](#delete)
 - [Reference](#reference)
-- [Technical Details](#technical-details)
+- [Technical details](#technical-details)
   - [Production RHEL with Compose](#production-rhel-with-compose)
   - [OpenShift hardened pilot](#openshift-hardened-pilot)
   - [Documentation](#documentation)
@@ -93,7 +93,14 @@ After either track, you’ll have built and deployed:
 
 ### See it in action
 
-The hands-on walkthrough screenshots in [Track 1](#submit-support-tickets) and [Track 2](#step-4-hands-on-validation-same-checklist-as-track-1) illustrate email submission, PII tokenization, classification, and queue filtering. Recorded demos and Arcade walkthroughs will be linked here as they become available.
+Screenshots throughout this README show the key stages of the workflow:
+
+- **Welcome page** — onboarding with the inference provider pill ([Track 1 screenshot](#step-2-verify-deployment))
+- **Main inbox** — classified tickets with category, urgency, and classification time ([Track 1 screenshot](#submit-support-tickets))
+- **PII redaction** — sanitized body with `[TOKEN]` placeholders and vault rehydration ([Track 1 screenshot](#step-2-check-redaction))
+- **Load test results** — GuideLLM latency and throughput tables ([Track 1 screenshot](#step-3-review-results))
+
+Recorded demos and Arcade walkthroughs will be linked here as they become available.
 
 ### Architecture
 
@@ -718,7 +725,7 @@ make quadlet-down
 # or: systemctl --user stop agent-dashboard email-gateway rhaii-cpu-engine
 ```
 
-**Compose alternative** on RHEL (no systemd): see [Production RHEL with Compose](#production-rhel-with-compose) under [Technical Details](#technical-details). Full Quadlet notes: [deploy/quadlet/README.md](deploy/quadlet/README.md).
+**Compose alternative** on RHEL (no systemd): see [Production RHEL with Compose](#production-rhel-with-compose) under [Technical details](#technical-details). Full Quadlet notes: [deploy/quadlet/README.md](deploy/quadlet/README.md).
 
 ### What you've accomplished
 
@@ -767,7 +774,7 @@ For local Compose or RHEL Compose deployments, run `make down` to stop the conta
 - [AI quickstart catalog](https://docs.redhat.com/en/learn/ai-quickstarts)
 
 
-## Technical Details
+## Technical details
 
 ### Production RHEL with Compose
 
@@ -824,9 +831,9 @@ HTTP ingest then requires `X-Ingest-Key`. Pin images: `IMAGE_TAG=v1.2.3 make dep
 
 ## Tags
 
-- Title: Triage support emails while protecting sensitive data
-- Description: Classify support emails and redact PII locally, helping teams protect sensitive data while streamlining helpdesk triage.
-- Industry: Information technology
-- Product: Red Hat AI Inference
-- Use case: Helpdesk email triage and PII redaction
-- Contributor org: Red Hat
+- **Title:** Triage support emails while protecting sensitive data
+- **Description:** Classify support emails and redact PII locally, helping teams protect sensitive data while streamlining helpdesk triage.
+- **Industry:** Information technology
+- **Product:** Red Hat AI Inference
+- **Use case:** Helpdesk email triage and PII redaction
+- **Contributor org:** Red Hat
