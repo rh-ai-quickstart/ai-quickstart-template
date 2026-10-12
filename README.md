@@ -1,12 +1,13 @@
 # Secure Local AI for Helpdesk Email Triage and PII Redaction
 
-Classify helpdesk emails by category and urgency with PII tokenization using Red Hat® AI Inference® CPU on Red Hat® Enterprise Linux® (RHEL) or OpenShift.
+Classify helpdesk emails by category and urgency with PII tokenization and CPU-based Red Hat AI Inference on RHEL or OpenShift.
 
 ## Table of contents
 
 - [Overview](#overview)
   - [Who is this for?](#who-is-this-for)
   - [What this quickstart provides](#what-this-quickstart-provides)
+    - [AI transparency and user safety](#ai-transparency-and-user-safety)
   - [What you'll build](#what-youll-build)
   - [See it in action](#see-it-in-action)
   - [Architecture](#architecture)
@@ -20,9 +21,9 @@ Classify helpdesk emails by category and urgency with PII tokenization using Red
     - [Software](#software-1)
     - [Permissions](#permissions-1)
 - [Deploy](#deploy)
-  - [Track 1: Deploy to OpenShift (Red Hat AI Inference CPU)](#track-1-deploy-to-openshift-red-hat-ai-inference-cpu)
+  - [Track 1: Deploy to OpenShift (CPU inference)](#track-1-deploy-to-openshift-cpu-inference)
     - [Prerequisites](#prerequisites)
-    - [Step 1: Deploy with Red Hat AI Inference CPU](#step-1-deploy-with-red-hat-ai-inference-cpu)
+    - [Step 1: Deploy with Red Hat AI Inference](#step-1-deploy-with-red-hat-ai-inference)
     - [Step 2: Verify deployment](#step-2-verify-deployment)
     - [Submit support tickets](#submit-support-tickets)
     - [Review classified and redacted emails](#review-classified-and-redacted-emails)
@@ -55,7 +56,7 @@ Classify helpdesk emails by category and urgency with PII tokenization using Red
 
 Modern enterprises handle thousands of unstructured data streams every day, including customer support emails, contact forms, and IT helpdesk requests. Before these requests can be processed or routed, compliance teams need to ensure that Personally Identifiable Information (PII)—such as credit card numbers, phone numbers, account identifiers, and full names—is securely sanitized to support regulatory requirements such as GDPR, HIPAA, and GLBA. Traditionally, addressing this challenge could mean routing sensitive data to external cloud APIs, increasing data-leakage risk, or provisioning high-performance GPU servers that are expensive and often supply-constrained.
 
-This quickstart demonstrates how to use CPU-based AI inference on existing RHEL or OpenShift infrastructure to run a lightweight, stateless classification and redaction service locally using Red Hat AI Inference. It focuses on customer support email triage—classifying requests by category and urgency while sanitizing PII—but the same pattern can extend to CRM records, ticketing systems, contact forms, and webhook-based workflows. GuideLLM benchmarking helps teams measure throughput and latency on standard CPU hardware, providing data to assess pilot capacity and support-response SLAs.
+This quickstart demonstrates how to use CPU-based AI inference on existing **Red Hat® Enterprise Linux® (RHEL)** or OpenShift infrastructure to run a lightweight, stateless classification and redaction service locally using **Red Hat® AI Inference**. It focuses on customer support email triage—classifying requests by category and urgency while sanitizing PII—but the same pattern can extend to CRM records, ticketing systems, contact forms, and webhook-based workflows. GuideLLM benchmarking helps teams measure throughput and latency on standard CPU hardware, providing data to assess pilot capacity and support-response SLAs.
 
 ### Who is this for?
 
@@ -67,10 +68,16 @@ This quickstart demonstrates how to use CPU-based AI inference on existing RHEL 
 
 > **AI-generated content disclaimer:** This quickstart uses AI to classify emails and detect PII. AI-generated classifications (category, urgency, and sanitized text) should always be verified by support staff before routing tickets or making business decisions. The system may produce incorrect classifications or miss PII in edge cases.
 
+### AI transparency and user safety
+
+- **Before you deploy** — Treat every category, urgency score, and sanitized body as AI-generated output that can be wrong or incomplete; verify before routing tickets or acting on redacted text.
+- **In the Streamlit UI** — A persistent banner on every page reminds agents that classification fields are AI-generated and must be verified before routing. Category, urgency, sanitized body, and AI summary show *(AI)* or *(AI-generated)* labels; the banner is not dismissible.
+- **In the gateway** — Structured PII is tokenized before text is sent to inference; rehydration from the vault is gated by `VAULT_SECRET` so agents only see raw values when authorized.
+
 This quickstart has two main components:
 
 - An email gateway that ingests messages, tokenizes detected PII before classification, and returns a ticket result through its API. It can also send results to a configured downstream webhook.
-- An optional Streamlit UI where support agents can review classified tickets, filter by category and urgency, preview downstream JSON, and rehydrate tokenized values when authorized. The UI includes persistent AI transparency indicators: a banner on every page stating that category, urgency, and sanitized text are AI-generated and should be verified before routing, and *(AI)* or *(AI-generated)* labels on each classification field (Category, Urgency, Sanitized body, AI summary).
+- An optional Streamlit UI where support agents can review classified tickets, filter by category and urgency, preview downstream JSON, and rehydrate tokenized values when authorized.
 
 Organizations can integrate the gateway API or reuse parts of the gateway in their existing systems. The Streamlit UI provides a way to review the workflow during evaluation.
 
@@ -78,7 +85,7 @@ Organizations can integrate the gateway API or reuse parts of the gateway in the
 
 The quickstart supports two tracks:
 
-* [Track 1](#track-1-deploy-to-openshift-red-hat-ai-inference-cpu) deploys the stack to OpenShift.
+* [Track 1](#track-1-deploy-to-openshift-cpu-inference) deploys the stack to OpenShift.
 * [Track 2](#track-2-run-on-rhel-with-systemd-quadlet) runs on RHEL with systemd and Quadlet.
 
 Both use Red Hat AI Inference and follow the same email triage workflow; choose the track that matches your environment.
@@ -159,7 +166,7 @@ Both tracks run Red Hat AI Inference; no GPU is required.
 
 ## Deploy
 
-### Track 1: Deploy to OpenShift (Red Hat AI Inference CPU)
+### Track 1: Deploy to OpenShift (CPU inference)
 
 *~30–45 minutes.*
 
@@ -173,7 +180,7 @@ Both tracks run Red Hat AI Inference; no GPU is required.
 
 > **Important:** Keep `email-gateway` and `sample-emails` at **1 replica each**. Both components use a single shared PVC (`gateway-data`) for ticket storage and file-watcher state. Running more than one replica causes concurrent writes to the same files, leading to duplicate tickets and corrupted state.
 
-#### Step 1: Deploy with Red Hat AI Inference CPU
+#### Step 1: Deploy with Red Hat AI Inference
 
 ```bash
 git clone https://github.com/rh-ai-quickstart/helpdesk-email-triage && cd helpdesk-email-triage
@@ -448,7 +455,7 @@ In this step you will use [GuideLLM](https://github.com/vllm-project/guidellm) t
 
 ##### Step 1: Prepare registry access
 
-The benchmark Job uses the Red Hat GuideLLM image. It can use the same `registry.redhat.io` pull secret as Red Hat AI Inference CPU. If the namespace does not already have usable registry credentials, log in from your workstation so the deployment script can create the pull secret:
+The benchmark Job uses the Red Hat GuideLLM image. It can use the same `registry.redhat.io` pull secret as Red Hat AI Inference. If the namespace does not already have usable registry credentials, log in from your workstation so the deployment script can create the pull secret:
 
 ```bash
 podman login registry.redhat.io
@@ -456,7 +463,7 @@ podman login registry.redhat.io
 
 ##### Step 2: Run the benchmark
 
-First deploy the quickstart to your OpenShift project with Red Hat AI Inference CPU inference enabled if you have not done so already.
+First deploy the quickstart to your OpenShift project with CPU-based Red Hat AI Inference enabled if you have not done so already.
 Then run `make guidellm-openshift`:
 
 ```bash
@@ -569,7 +576,7 @@ Example output across several runs (earlier files used smaller `rhaii-cpu-small`
   rate=4: 93/96 ok, e2e_mean=5.2s, tok/s=48.2
 ```
 
-Use the results to size Red Hat AI Inference CPU nodes before a pilot.
+Use the results to size CPU inference nodes for Red Hat AI Inference before a pilot.
 
 ---
 
@@ -734,7 +741,7 @@ make quadlet-down
 - Verified **category and urgency** and filtered the queue by classification.
 - Confirmed **PII redaction** (including sender and `ACC-…` account ids) in downstream JSON while retaining authorized vault rehydration.
 - Observed **classification latency** per ticket and in aggregate.
-- Optionally **benchmarked inference** with GuideLLM on Red Hat AI Inference CPU.
+- Optionally **benchmarked inference** with GuideLLM on CPU-based Red Hat AI Inference.
 
 ### Delete
 
@@ -802,7 +809,7 @@ oc create secret generic helpdesk-secrets \
   --from-literal=INGEST_API_KEY="$INGEST_API_KEY" \
   -n helpdesk-email-triage --dry-run=client -o yaml | oc apply -f -
 
-# Red Hat AI Inference CPU + hardening (recommended pilot):
+# CPU-based Red Hat AI Inference + hardening (recommended pilot):
 INFERENCE=rhaii OVERLAY=deploy/openshift/overlays/hardened make deploy-openshift
 
 # Mock + hardening (overlay smoke only):
