@@ -1,6 +1,6 @@
 # Secure Local AI for Helpdesk Email Triage and PII Redaction
 
-Securely classify helpdesk email by category and urgency with reversible PII tokenization and local Red Hat AI Inference 3.5 CPU on RHEL or OpenShift.
+Securely classify helpdesk email by category and urgency with reversible PII tokenization and local Red Hat® AI Inference® 3.5 CPU on RHEL or OpenShift.
 
 ## Table of Contents
 
@@ -8,6 +8,7 @@ Securely classify helpdesk email by category and urgency with reversible PII tok
   - [Who is this for?](#who-is-this-for)
   - [What this quickstart provides](#what-this-quickstart-provides)
   - [What you'll build](#what-youll-build)
+  - [See it in action](#see-it-in-action)
   - [Architecture](#architecture)
 - [Requirements](#requirements)
   - [Track 1: OpenShift requirements](#track-1-openshift-requirements)
@@ -53,6 +54,8 @@ This quickstart demonstrates how to use CPU-based AI inference on existing RHEL 
 
 ### What this quickstart provides
 
+> **AI-generated content disclaimer:** This quickstart uses AI to classify emails and detect PII. AI-generated classifications (category, urgency, and sanitized text) should always be verified by support staff before routing tickets or making business decisions. The system may produce incorrect classifications or miss PII in edge cases.
+
 This quickstart has two main components:
 
 - An email gateway that ingests messages, tokenizes detected PII before classification, and returns a ticket result through its API. It can also send results to a configured downstream webhook.
@@ -77,6 +80,10 @@ After either track, you’ll have built and deployed:
 - An optional Streamlit inbox for reviewing tickets, filtering the queue, previewing downstream JSON, and rehydrating original values when authorized
 - An optional GuideLLM runner for benchmarking CPU inference on OpenShift or RHEL
 
+### See it in action
+
+The hands-on walkthrough screenshots in [Track 1](#submit-support-tickets) and [Track 2](#step-4-hands-on-validation-same-checklist-as-track-1) illustrate email submission, PII tokenization, classification, and queue filtering. Recorded demos and Arcade walkthroughs will be linked here as they become available.
+
 ### Architecture
 
 ![Four-stage pipeline: ingestion → gateway vault → inference → optional agent inbox](docs/images/architecture-overview.png)
@@ -94,7 +101,7 @@ Both tracks run Red Hat AI Inference 3.5 CPU inference; no GPU is required.
 
 #### Hardware
 
-- x86_64 inference worker with AVX512
+- x86_64 inference worker with AVX512 (Intel Xeon Scalable 2nd gen or later, AMD EPYC 2nd gen or later). To verify AVX512 support on Linux, run: `lscpu | grep avx512` or `grep -o 'avx512[^ ]*' /proc/cpuinfo | sort -u`. If no output is returned, your CPU does not support AVX512 and this quickstart will not work.
 - At least **8 vCPUs** and **16 GiB RAM** allocatable on one inference worker for the default `rhaii-cpu` manifest (requests 8 CPU / 16 Gi, limit 16 CPU / 16 Gi; 32 GiB RAM recommended)
 - **Smaller workers (4–8 cores, 8 GiB RAM):** add the [`rhaii-cpu-small`](deploy/openshift/README.md#inference-resource-sizing-components-rhaii-cpu-small) Kustomize component to your overlay after `rhaii-cpu`
 - 20 GiB `rhaii-model-cache` PVC for model weights
@@ -117,7 +124,7 @@ Both tracks run Red Hat AI Inference 3.5 CPU inference; no GPU is required.
 
 #### Hardware
 
-- x86_64 CPU with AVX512
+- x86_64 CPU with AVX512 (Intel Xeon Scalable 2nd gen or later, AMD EPYC 2nd gen or later). To verify AVX512 support on Linux, run: `lscpu | grep avx512` or `grep -o 'avx512[^ ]*' /proc/cpuinfo | sort -u`. If no output is returned, your CPU does not support AVX512 and this quickstart will not work.
 - At least 4 vCPUs available to inference (8 recommended)
 - At least 16 GiB system RAM (32 GiB recommended)
 - 20 GiB for model weights in `~/rhaii-cache` or the path configured in the Quadlet unit
@@ -732,10 +739,21 @@ For local Compose or RHEL Compose deployments, run `make down` to stop the conta
 
 ## Reference
 
+**AI Inference and model**
+
 - [Red Hat AI Inference 3.5 — CPU inference](https://docs.redhat.com/en/documentation/red_hat_ai_inference/3.5/html/getting_started/about-cpu-inference_getting-started)
+- [Red Hat AI Inference 3.5 — supported hardware and configurations](https://docs.redhat.com/en/documentation/red_hat_ai/3/html/supported_product_and_hardware_configurations/rhaiis-supported-deployment-environments_supported-configurations)
+- [Qwen2.5-1.5B-Instruct on Hugging Face](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct)
+- [GuideLLM benchmark tool](https://github.com/vllm-project/guidellm)
+
+**Platform documentation**
+
+- [OpenShift Container Platform documentation](https://docs.redhat.com/en/documentation/openshift_container_platform)
+- [Red Hat Enterprise Linux 9 documentation](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9)
+
+**Quickstarts and learning**
+
 - [AI quickstart catalog](https://docs.redhat.com/en/learn/ai-quickstarts)
-- [Qwen2.5-1.5B-Instruct](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct)
-- [GuideLLM](https://github.com/vllm-project/guidellm)
 
 
 ## Technical Details
