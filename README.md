@@ -1,6 +1,6 @@
 # Secure Local AI for Helpdesk Email Triage and PII Redaction
 
-Securely classify helpdesk email by category and urgency with reversible PII tokenization and local Red Hat® AI Inference® 3.5 CPU on RHEL or OpenShift.
+Securely classify helpdesk email by category and urgency with reversible PII tokenization and local Red Hat AI Inference 3.5 CPU on Red Hat® Enterprise Linux® (RHEL) or OpenShift.
 
 ## Table of Contents
 
@@ -44,7 +44,7 @@ Securely classify helpdesk email by category and urgency with reversible PII tok
 
 Modern enterprises handle thousands of unstructured data streams every day, including customer support emails, contact forms, and IT helpdesk requests. Before these requests can be processed or routed, compliance teams need to ensure that Personally Identifiable Information (PII)—such as credit card numbers, phone numbers, account identifiers, and full names—is securely sanitized to support regulatory requirements such as GDPR, HIPAA, and GLBA. Traditionally, addressing this challenge could mean routing sensitive data to external cloud APIs, increasing data-leakage risk, or provisioning high-performance GPU servers that are expensive and often supply-constrained.
 
-This quickstart demonstrates how to use CPU-based AI inference on existing RHEL or OpenShift infrastructure to run a lightweight, stateless classification and redaction service locally. It focuses on customer support email triage—classifying requests by category and urgency while sanitizing PII—but the same pattern can extend to CRM records, ticketing systems, contact forms, and webhook-based workflows. GuideLLM benchmarking helps teams measure throughput and latency on standard CPU hardware, providing data to assess pilot capacity and support-response SLAs.
+This quickstart demonstrates how to use CPU-based AI inference on existing RHEL or OpenShift infrastructure to run a lightweight, stateless classification and redaction service locally using Red Hat® AI Inference®. It focuses on customer support email triage—classifying requests by category and urgency while sanitizing PII—but the same pattern can extend to CRM records, ticketing systems, contact forms, and webhook-based workflows. GuideLLM benchmarking helps teams measure throughput and latency on standard CPU hardware, providing data to assess pilot capacity and support-response SLAs.
 
 ### Who is this for?
 
@@ -468,7 +468,7 @@ oc logs -n helpdesk-email-triage job/guidellm-benchmark-<timestamp> --follow
 
 The script prints the re-fetch command at the end of its output. GuideLLM produces several summary tables; the most useful for sizing are **Request Latency Statistics** and **Server Throughput Statistics**. For example, with default `rhaii-cpu` sizing (8 CPU request / 16 CPU limit, 16 Gi memory) and `Qwen/Qwen2.5-1.5B-Instruct` (128-token prompts, 64-token outputs):
 
-```
+```console
 
 ℹ Request Latency Statistics (Completed Requests)
 |============|=========|========|=======|=======|=======|=======|======|======|======|======|
@@ -545,7 +545,7 @@ for f in sorted(glob.glob('./results/guidellm-openshift/*.json')):
 
 Example output across several runs (earlier files used smaller `rhaii-cpu-small`-equivalent nodes; the last file reflects default 8/16-core sizing):
 
-```
+```console
 ./results/guidellm-openshift/guidellm-benchmark-1791282912.json
   rate=2: 47/48 ok, e2e_mean=5.1s, tok/s=25.2
   rate=4: 93/96 ok, e2e_mean=5.2s, tok/s=48.2
