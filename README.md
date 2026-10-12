@@ -1,6 +1,6 @@
 # Secure Local AI for Helpdesk Email Triage and PII Redaction
 
-Securely classify helpdesk email by category and urgency with reversible PII tokenization and local Red Hat AI Inference 3.5 CPU on Red Hat® Enterprise Linux® (RHEL) or OpenShift.
+Securely classify helpdesk email by category and urgency with reversible PII tokenization and local Red Hat® AI Inference® 3.5 CPU on Red Hat® Enterprise Linux® (RHEL) or OpenShift.
 
 ## Table of Contents
 
@@ -12,7 +12,13 @@ Securely classify helpdesk email by category and urgency with reversible PII tok
   - [Architecture](#architecture)
 - [Requirements](#requirements)
   - [Track 1: OpenShift requirements](#track-1-openshift-requirements)
+    - [Hardware](#hardware)
+    - [Software](#software)
+    - [Permissions](#permissions)
   - [Track 2: RHEL requirements](#track-2-rhel-requirements)
+    - [Hardware](#hardware-1)
+    - [Software](#software-1)
+    - [Permissions](#permissions-1)
 - [Deploy](#deploy)
   - [Track 1: Deploy to OpenShift (Red Hat AI Inference CPU)](#track-1-deploy-to-openshift-red-hat-ai-inference-cpu)
     - [Prerequisites](#prerequisites)
@@ -20,9 +26,14 @@ Securely classify helpdesk email by category and urgency with reversible PII tok
     - [Step 2: Verify deployment](#step-2-verify-deployment)
     - [Submit support tickets](#submit-support-tickets)
     - [Review classified and redacted emails](#review-classified-and-redacted-emails)
+      - [Step 1: Review the email in the different inboxes based on classification](#step-1-review-the-email-in-the-different-inboxes-based-on-classification)
+      - [Step 2: Check redaction](#step-2-check-redaction)
     - [Review classification speed](#review-classification-speed)
     - [Testing classification and redaction quality](#testing-classification-and-redaction-quality)
     - [Load testing](#load-testing)
+      - [Step 1: Prepare registry access](#step-1-prepare-registry-access)
+      - [Step 2: Run the benchmark](#step-2-run-the-benchmark)
+      - [Step 3: Review results](#step-3-review-results)
   - [Track 2: Run on RHEL with systemd (Quadlet)](#track-2-run-on-rhel-with-systemd-quadlet)
     - [Prerequisites](#prerequisites-1)
     - [Step 1: One-time setup (repo root)](#step-1-one-time-setup-repo-root)
@@ -44,7 +55,7 @@ Securely classify helpdesk email by category and urgency with reversible PII tok
 
 Modern enterprises handle thousands of unstructured data streams every day, including customer support emails, contact forms, and IT helpdesk requests. Before these requests can be processed or routed, compliance teams need to ensure that Personally Identifiable Information (PII)—such as credit card numbers, phone numbers, account identifiers, and full names—is securely sanitized to support regulatory requirements such as GDPR, HIPAA, and GLBA. Traditionally, addressing this challenge could mean routing sensitive data to external cloud APIs, increasing data-leakage risk, or provisioning high-performance GPU servers that are expensive and often supply-constrained.
 
-This quickstart demonstrates how to use CPU-based AI inference on existing RHEL or OpenShift infrastructure to run a lightweight, stateless classification and redaction service locally using Red Hat® AI Inference®. It focuses on customer support email triage—classifying requests by category and urgency while sanitizing PII—but the same pattern can extend to CRM records, ticketing systems, contact forms, and webhook-based workflows. GuideLLM benchmarking helps teams measure throughput and latency on standard CPU hardware, providing data to assess pilot capacity and support-response SLAs.
+This quickstart demonstrates how to use CPU-based AI inference on existing RHEL or OpenShift infrastructure to run a lightweight, stateless classification and redaction service locally using Red Hat AI Inference. It focuses on customer support email triage—classifying requests by category and urgency while sanitizing PII—but the same pattern can extend to CRM records, ticketing systems, contact forms, and webhook-based workflows. GuideLLM benchmarking helps teams measure throughput and latency on standard CPU hardware, providing data to assess pilot capacity and support-response SLAs.
 
 ### Who is this for?
 
@@ -70,7 +81,7 @@ The quickstart supports two tracks:
 * [Track 1](#track-1-deploy-to-openshift-red-hat-ai-inference-cpu) deploys the stack to OpenShift.
 * [Track 2](#track-2-run-on-rhel-with-systemd-quadlet) runs on RHEL with systemd and Quadlet.
 
-Both use Red Hat AI Inference 3.5 CPU and follow the same email triage workflow; choose the track that matches your environment.
+Both use Red Hat AI Inference and follow the same email triage workflow; choose the track that matches your environment.
 
 After either track, you’ll have built and deployed:
 
@@ -90,12 +101,12 @@ The hands-on walkthrough screenshots in [Track 1](#submit-support-tickets) and [
 
 1. **Ingest** — HTTP, SMTP, or file watcher on `.eml` drops.
 2. **Gateway** — Tokenizes structured PII into a vault; exposes `TriageResult` JSON and `/health/ready`.
-3. **Inference** — Classification on **Red Hat AI Inference 3.5 CPU** on tokenized text only.
+3. **Inference** — Classification on **Red Hat AI Inference** on tokenized text only.
 4. **Agent inbox** *(optional)* — Streamlit UI to review redaction and classification
 
 ## Requirements
 
-Both tracks run Red Hat AI Inference 3.5 CPU inference; no GPU is required.
+Both tracks run Red Hat AI Inference; no GPU is required.
 
 ### Track 1: OpenShift requirements
 
@@ -557,7 +568,7 @@ Use the results to size Red Hat AI Inference CPU nodes before a pilot.
 
 ### Track 2: Run on RHEL with systemd (Quadlet)
 
-*~45 minutes. **Recommended for single-host evaluation** — Red Hat AI Inference 3.5 CPU via user systemd, with optional [GuideLLM benchmarking](#step-5-optional-benchmark-inference-with-guidellm).*
+*~45 minutes. **Recommended for single-host evaluation** — Red Hat AI Inference via user systemd, with optional [GuideLLM benchmarking](#step-5-optional-benchmark-inference-with-guidellm).*
 
 #### Prerequisites
 
@@ -674,7 +685,7 @@ Use GuideLLM to measure throughput and latency at the Red Hat AI Inference endpo
 
 For end-to-end **gateway** load, send parallel `POST /ingest/raw` requests to `http://127.0.0.1:8080`. Include `X-Ingest-Key` when configured.
 
-##### Pull the GuideLLM image
+**Pull the GuideLLM image**
 
 If you have not already logged in during setup, authenticate to the Red Hat registry and pull the benchmark image:
 
@@ -683,7 +694,7 @@ podman login registry.redhat.io
 podman pull registry.redhat.io/rhai/guidellm-rhel9:3.5.0-1787154406
 ```
 
-##### Run the benchmark
+**Run the benchmark**
 
 By default, the benchmark targets Red Hat AI Inference at `http://127.0.0.1:8000`:
 
