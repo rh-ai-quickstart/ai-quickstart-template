@@ -97,7 +97,7 @@ Results: `./results/guidellm-quadlet/`. Same `registry.redhat.io/rhai/guidellm-r
 
 ## OpenShift
 
-Cluster deploy is documented in [README Track 1](../README.md#track-1-deploy-to-openshift-rhaii-cpu) and [deploy-openshift.md](deploy-openshift.md) (overlay catalog). After verify, continue with [Submit support tickets](../README.md#submit-support-tickets) through [What you've accomplished](../README.md#what-youve-accomplished), or [quickstart-walkthrough.md](quickstart-walkthrough.md).
+Cluster deploy is documented in [README Track 1](../README.md#track-1-deploy-to-openshift-cpu-inference) and [deploy-openshift.md](deploy-openshift.md) (overlay catalog). After verify, continue with [Submit support tickets](../README.md#submit-support-tickets) through [What you've accomplished](../README.md#what-youve-accomplished), or [quickstart-walkthrough.md](quickstart-walkthrough.md).
 
 ## Mock vs RHAII
 

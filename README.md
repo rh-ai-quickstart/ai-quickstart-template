@@ -1,6 +1,6 @@
 # Secure Local AI for Helpdesk Email Triage and PII Redaction
 
-Classify helpdesk emails by category and urgency with PII tokenization and CPU-based Red Hat® AI Inference on Red Hat® Enterprise Linux® (RHEL) or OpenShift.
+Classify helpdesk emails by category and urgency with PII tokenization and CPU-based Red Hat AI Inference on RHEL or OpenShift.
 
 > **AI-generated content:** This quickstart uses AI to classify emails and detect PII. Verify category, urgency, and sanitized text before routing tickets or making business decisions.
 
@@ -27,16 +27,17 @@ Classify helpdesk emails by category and urgency with PII tokenization and CPU-b
     - [Prerequisites](#prerequisites)
     - [Step 1: Deploy with Red Hat AI Inference](#step-1-deploy-with-red-hat-ai-inference)
     - [Step 2: Verify deployment](#step-2-verify-deployment)
-    - [Submit support tickets](#submit-support-tickets)
-    - [Review classified and redacted emails](#review-classified-and-redacted-emails)
-      - [Step 1: Review the email in the different inboxes based on classification](#step-1-review-the-email-in-the-different-inboxes-based-on-classification)
-      - [Step 2: Check redaction](#step-2-check-redaction)
-    - [Review classification speed](#review-classification-speed)
-    - [Testing classification and redaction quality](#testing-classification-and-redaction-quality)
-    - [Load testing](#load-testing)
-      - [Step 1: Prepare registry access](#step-1-prepare-registry-access)
-      - [Step 2: Run the benchmark](#step-2-run-the-benchmark)
-      - [Step 3: Review results](#step-3-review-results)
+    - [Step 3: Hands-on validation](#step-3-hands-on-validation)
+      - [Submit support tickets](#submit-support-tickets)
+      - [Review classified and redacted emails](#review-classified-and-redacted-emails)
+        - [Step 1: Review the email in the different inboxes based on classification](#step-1-review-the-email-in-the-different-inboxes-based-on-classification)
+        - [Step 2: Check redaction](#step-2-check-redaction)
+      - [Review classification speed](#review-classification-speed)
+      - [Testing classification and redaction quality](#testing-classification-and-redaction-quality)
+      - [Load testing](#load-testing)
+        - [Step 1: Prepare registry access](#step-1-prepare-registry-access)
+        - [Step 2: Run the benchmark](#step-2-run-the-benchmark)
+        - [Step 3: Review results](#step-3-review-results)
   - [Track 2: Run on RHEL with systemd (Quadlet)](#track-2-run-on-rhel-with-systemd-quadlet)
     - [Prerequisites](#prerequisites-1)
     - [Step 1: One-time setup (repo root)](#step-1-one-time-setup-repo-root)
@@ -58,7 +59,7 @@ Classify helpdesk emails by category and urgency with PII tokenization and CPU-b
 
 Modern enterprises handle thousands of unstructured data streams every day, including customer support emails, contact forms, and IT helpdesk requests. Before these requests can be processed or routed, compliance teams need to ensure that Personally Identifiable Information (PII)—such as credit card numbers, phone numbers, account identifiers, and full names—is securely sanitized to support regulatory requirements such as GDPR, HIPAA, and GLBA. Traditionally, addressing this challenge could mean routing sensitive data to external cloud APIs, increasing data-leakage risk, or provisioning high-performance GPU servers that are expensive and often supply-constrained.
 
-This quickstart demonstrates how to use CPU-based AI inference on existing Red Hat Enterprise Linux (RHEL) or OpenShift infrastructure to run a lightweight, stateless classification and redaction service locally using Red Hat AI Inference. It focuses on customer support email triage—classifying requests by category and urgency while sanitizing PII—but the same pattern can extend to CRM records, ticketing systems, contact forms, and webhook-based workflows. GuideLLM benchmarking helps teams measure throughput and latency on standard CPU hardware, providing data to assess pilot capacity and support-response SLAs.
+This quickstart demonstrates how to use CPU-based AI inference on existing **Red Hat® Enterprise Linux® (RHEL)** or OpenShift infrastructure to run a lightweight, stateless classification and redaction service locally using **Red Hat® AI Inference**. It focuses on customer support email triage—classifying requests by category and urgency while sanitizing PII—but the same pattern can extend to CRM records, ticketing systems, contact forms, and webhook-based workflows. GuideLLM benchmarking helps teams measure throughput and latency on standard CPU hardware, providing data to assess pilot capacity and support-response SLAs.
 
 ### Who is this for?
 
@@ -70,10 +71,12 @@ This quickstart demonstrates how to use CPU-based AI inference on existing Red H
 
 > **AI-generated content disclaimer:** This quickstart uses AI to classify emails and detect PII. AI-generated classifications (category, urgency, and sanitized text) should always be verified by support staff before routing tickets or making business decisions. The system may produce incorrect classifications or miss PII in edge cases.
 
+See [AI transparency and user safety](#ai-transparency-and-user-safety) for how the optional Streamlit UI keeps verification reminders persistent and non-dismissible.
+
 ### AI transparency and user safety
 
 - **Before you deploy** — Treat every category, urgency score, and sanitized body as AI-generated output that can be wrong or incomplete; verify before routing tickets or acting on redacted text.
-- **In the Streamlit UI** — A persistent banner on every page reminds agents that classification fields are AI-generated and must be verified before routing. Category, urgency, sanitized body, and AI summary show *(AI)* or *(AI-generated)* labels; the banner is not dismissible.
+- **In the Streamlit UI** — The inbox implements persistent, non-dismissible AI transparency indicators throughout the user experience. A banner on every page states that category, urgency, sanitized text, and summaries are AI-generated and must be verified before routing; the banner cannot be dismissed. Category, urgency, sanitized body, and AI summary fields show *(AI)* or *(AI-generated)* labels so agents always know when they are interacting with AI-generated content.
 - **In the gateway** — Structured PII is tokenized before text is sent to inference; rehydration from the vault is gated by `VAULT_SECRET` so agents only see raw values when authorized.
 
 This quickstart has two main components:
@@ -308,7 +311,11 @@ The main dashboard will look as follows:
 
 Save your **dashboard** URL (`https://<dashboard-route>/welcome`) and **gateway** URL (`https://<gateway-route-host>`) for the steps below.
 
-#### Submit support tickets
+#### Step 3: Hands-on validation
+
+Complete the checklist below to submit tickets, review AI classification and PII redaction, and optionally benchmark inference.
+
+##### Submit support tickets
 
 > **Verify AI output:** New tickets show AI-assigned category and urgency — confirm them before treating results as final.
 
@@ -360,9 +367,9 @@ If sample\_emails are mounted the app will rescan for new/changed files and inge
 
 **What to look for:** New tickets in the inbox queue within a few seconds.
 
-#### Review classified and redacted emails
+##### Review classified and redacted emails
 
-##### Step 1: Review the email in the different inboxes based on classification
+###### Step 1: Review the email in the different inboxes based on classification
 
 1. On the dashboard, set **Queue** to each category: `Billing`, `Tech Support`, `Account Access`, `General`, then `All`.
 
@@ -386,7 +393,7 @@ Expected sample results (file-watcher emails):
 | VPN dropping | Tech Support | Medium |
 | GDPR erasure request | General | Low |
 
-##### Step 2: Check redaction
+###### Step 2: Check redaction
 
 1. Open a ticket with obvious PII (e.g. billing double-charge).
 2. In **Sanitized body**, confirm tokens (`[NAME_1]`, `[EMAIL_1]`, `[CARD_LAST4_1]`, `[PHONE_1]`, `[ACCOUNT_ID_1]` for `ACC-…`) — not raw values. **From** on the ticket should be tokenized.
@@ -401,7 +408,7 @@ Expected sample results (file-watcher emails):
 
    ![What downstream systems see — sanitized JSON output](docs/images/what-downstream-sees.png)
 
-#### Review classification speed
+##### Review classification speed
 
 1. In the queue list, each ticket shows its **classification time**.
 2. At the top of the inbox, check **Avg classification** in the metrics row.
@@ -427,7 +434,7 @@ $ curl -sk -X POST "${GW}/ingest/raw" \
 ```
 which took 4662.3 milliseconds.
 
-#### Testing classification and redaction quality
+##### Testing classification and redaction quality
 
 Use these tests to validate that PII redaction and classification are working correctly end-to-end.
 
@@ -453,11 +460,11 @@ Use these tests to validate that PII redaction and classification are working co
 
 At this point you can explore the submission channels and the results in the UI before continuing on to load testing.
 
-#### Load testing
+##### Load testing
 
 In this step you will use [GuideLLM](https://github.com/vllm-project/guidellm) to send synthetic requests to the OpenAI-compatible Red Hat AI Inference endpoint. This measures inference throughput and latency; it does not load-test the gateway.
 
-##### Step 1: Prepare registry access
+###### Step 1: Prepare registry access
 
 The benchmark Job uses the Red Hat GuideLLM image. It can use the same `registry.redhat.io` pull secret as Red Hat AI Inference. If the namespace does not already have usable registry credentials, log in from your workstation so the deployment script can create the pull secret:
 
@@ -465,7 +472,7 @@ The benchmark Job uses the Red Hat GuideLLM image. It can use the same `registry
 podman login registry.redhat.io
 ```
 
-##### Step 2: Run the benchmark
+###### Step 2: Run the benchmark
 
 First deploy the quickstart to your OpenShift project with CPU-based Red Hat AI Inference enabled if you have not done so already.
 Then run `make guidellm-openshift`:
@@ -482,7 +489,7 @@ oc logs -n helpdesk-email-triage job/guidellm-benchmark-<timestamp> --follow
 
 For more details on how to load test inference with GuideLLM see [the OpenShift benchmark runbook](docs/deploy-openshift.md#load-test-inference-guidellm).
 
-##### Step 3: Review results
+###### Step 3: Review results
 
 
 When the Job completes, results are written to `./results/guidellm-openshift/`. Each run produces an HTML report and a JSON archive named with the Job timestamp.
