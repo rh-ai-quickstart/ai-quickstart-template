@@ -44,6 +44,7 @@ Securely classify helpdesk email by category and urgency with reversible PII tok
     - [Stop](#stop)
   - [What you've accomplished](#what-youve-accomplished)
   - [Delete](#delete)
+- [Troubleshooting](#troubleshooting)
 - [Reference](#reference)
 - [Technical Details](#technical-details)
   - [Production RHEL with Compose](#production-rhel-with-compose)
@@ -70,7 +71,7 @@ This quickstart demonstrates how to use CPU-based AI inference on existing RHEL 
 This quickstart has two main components:
 
 - An email gateway that ingests messages, tokenizes detected PII before classification, and returns a ticket result through its API. It can also send results to a configured downstream webhook.
-- An optional Streamlit UI where support agents can review classified tickets, filter by category and urgency, preview downstream JSON, and rehydrate tokenized values when authorized. The UI includes persistent AI transparency indicators: a banner on every page stating that category, urgency, and sanitized text are AI-generated and should be verified before routing, and *(AI)* or *(AI-generated)* labels on each classification field (Category, Urgency, Sanitized body, AI summary).
+- An optional Streamlit UI where support agents can review classified tickets, filter by category and urgency, preview downstream JSON, and rehydrate tokenized values when authorized. The UI includes persistent AI transparency indicators: a non-dismissible banner on every page stating that category, urgency, and sanitized text are AI-generated and should be verified before routing, and *(AI)* or *(AI-generated)* labels on each classification field (Category, Urgency, Sanitized body, AI summary). The banner cannot be hidden or closed and appears on every view where AI-generated content is displayed.
 
 Organizations can integrate the gateway API or reuse parts of the gateway in their existing systems. The Streamlit UI provides a way to review the workflow during evaluation.
 
@@ -93,7 +94,7 @@ After either track, you’ll have built and deployed:
 
 ### See it in action
 
-The hands-on walkthrough screenshots in [Track 1](#submit-support-tickets) and [Track 2](#step-4-hands-on-validation-same-checklist-as-track-1) illustrate email submission, PII tokenization, classification, and queue filtering. Recorded demos and Arcade walkthroughs will be linked here as they become available.
+The hands-on walkthrough screenshots in [Track 1](#submit-support-tickets) and [Track 2](#step-4-hands-on-validation-same-checklist-as-track-1) illustrate email submission, PII tokenization, classification, and queue filtering. Key screens include the welcome page, quick demo scenario buttons, queue filters, ticket detail with tokenized PII, vault rehydration, and classification latency metrics.
 
 ### Architecture
 
@@ -103,6 +104,8 @@ The hands-on walkthrough screenshots in [Track 1](#submit-support-tickets) and [
 2. **Gateway** — Tokenizes structured PII into a vault; exposes `TriageResult` JSON and `/health/ready`.
 3. **Inference** — Classification on **Red Hat AI Inference** on tokenized text only.
 4. **Agent inbox** *(optional)* — Streamlit UI to review redaction and classification
+
+> **Deployment constraint:** Keep `email-gateway` and `sample-emails` at **1 replica each**. Both share a single PVC (`gateway-data`) for ticket storage and file-watcher state. Running more than one replica causes concurrent writes to the same files, leading to duplicate tickets and corrupted state.
 
 ## Requirements
 
@@ -127,7 +130,7 @@ Both tracks run Red Hat AI Inference; no GPU is required.
 
 #### Permissions
 
-- Namespace admin (or equivalent) permissions for Routes, Deployments, Secrets, and PVCs
+- Namespace-level permissions to create Routes, Deployments, Secrets, and PVCs (no cluster admin required)
 - Access to a Red Hat account authorized to pull the Red Hat AI Inference image from `registry.redhat.io`
 - Hugging Face token
 
@@ -745,6 +748,23 @@ DELETE_NAMESPACE=1 make undeploy-openshift
 ```
 
 For local Compose or RHEL Compose deployments, run `make down` to stop the containers and remove their Compose volumes. For RHEL with Quadlet, run `make quadlet-down`; it stops the services and keeps the Quadlet units and data volumes. Full OpenShift overlay catalog: [docs/deploy-openshift.md](docs/deploy-openshift.md).
+
+---
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `curl …/health/ready` fails | Check `rhaii-cpu-engine` logs: `podman logs rhaii-cpu-engine --tail 80`. Verify `HUGGING_FACE_HUB_TOKEN` in `secrets.env`, registry login, and ≥16 GiB RAM. |
+| `/health` shows `"classify_model":""` or welcome page does not show Red Hat AI Inference | Re-copy `deploy/quadlet/email-gateway.container` to `~/.config/containers/systemd/`, then `systemctl --user daemon-reload && systemctl --user restart email-gateway`. |
+| Sidebar shows `Model: heuristic-fallback` with healthy inference | Stale tickets from early ingest before inference was ready. Triage a new Quick demo scenario, or stop the gateway, run `podman volume rm gateway-data`, and `make quadlet-up` again. |
+| Inference engine not starting (OpenShift) | Verify AVX512 support (`lscpu | grep avx512`) and that the node has ≥8 allocatable vCPUs and ≥16 GiB RAM. Add the `rhaii-cpu-small` component for smaller workers. |
+| PVC mount failures | Confirm the `gateway-data` and `rhaii-model-cache` PVCs are bound (`oc get pvc -n helpdesk-email-triage`) and that only one `email-gateway` replica is running. |
+| Authentication errors pulling images | Run `podman login registry.redhat.io` and confirm your Red Hat account has entitlements for the Red Hat AI Inference image. |
+| `make guidellm-quadlet` prompts for `HF_TOKEN` | Set a real `HUGGING_FACE_HUB_TOKEN` in `~/.config/helpdesk/secrets.env` — a shell `export` alone is not picked up by the Quadlet unit. |
+| Duplicate tickets in the inbox | More than one `email-gateway` replica is running — scale back to 1 replica. |
+
+For detailed deployment notes see [docs/deploy-openshift.md](docs/deploy-openshift.md) and [deploy/quadlet/README.md](deploy/quadlet/README.md).
 
 ---
 
